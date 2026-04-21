@@ -1,0 +1,76 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: kite-postgres
+    environment:
+      POSTGRES_USER: kite
+      POSTGRES_PASSWORD: kite
+      POSTGRES_DB: kite
+    ports:
+      - "5433:5432"
+    volumes:
+      - kite_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U kite -d kite"]
+      interval: 2s
+      timeout: 5s
+      retries: 10
+    networks:
+      - kite_network
+
+  migrate:
+    image: migrate/migrate:v4.18.1
+    container_name: kite-migrate
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./backend/db/migrations:/migrations
+    command:
+      - "-path=/migrations"
+      - "-database=postgres://kite:kite@postgres:5432/kite?sslmode=disable"
+      - "up"
+    networks:
+      - kite_network
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: kite-backend
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    ports:
+      - "8081:8080"
+    environment:
+      DATABASE_URL: postgres://kite:kite@postgres:5432/kite?sslmode=disable
+      JWT_SECRET: ${JWT_SECRET:-dev-secret-change-in-prod}
+      PORT: 8080
+      APP_ENV: production
+      FX_CACHE_TTL_MINUTES: 5
+      FX_SPREAD_PCT: 0.0075
+      COMPLIANCE_NGN_THRESHOLD: 50000000
+    networks:
+      - kite_network
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: kite-frontend
+    depends_on:
+      - backend
+    ports:
+      - "3000:80"
+    environment:
+      VITE_API_URL: http://localhost:8080
+    networks:
+      - kite_network
+
+volumes:
+  kite_pgdata:
+
+networks:
+  kite_network:
+    driver: bridge
