@@ -98,7 +98,7 @@ erDiagram
     deposits {
         uuid id PK
         uuid user_id FK
-        varchar idempotency_key UK
+        varchar idempotency_key "UNIQUE(user_id, idempotency_key)"
         varchar currency
         bigint amount
         varchar status
@@ -107,8 +107,9 @@ erDiagram
     fx_rate_cache {
         uuid id PK
         varchar base_currency
-        varchar target_currency UK "(base, target)"
+        varchar target_currency "UNIQUE(base_currency, target_currency)"
         numeric rate
+        timestamptz fetched_at
         timestamptz expires_at
     }
 
@@ -119,6 +120,7 @@ erDiagram
         varchar to_currency
         numeric market_rate
         numeric quoted_rate
+        numeric spread_pct
         bigint amount_in
         bigint amount_out
         bigint fee
@@ -151,6 +153,7 @@ erDiagram
         text recipient_account_name
         text failure_reason
         timestamptz reversed_at
+        timestamptz updated_at
     }
 
     audit_log {
