@@ -70,6 +70,7 @@ export default function TransactionDetail() {
   const payoutStatus = payoutDetail.data?.status
   const payoutFailed = payoutStatus === 'failed'
   const payoutInProgress = payoutStatus === 'pending' || payoutStatus === 'processing'
+  const payoutUnderReview = payoutStatus === 'review'
 
   return (
     <Layout>
@@ -186,7 +187,16 @@ export default function TransactionDetail() {
                       </>
                     )}
 
-                    {!payoutInProgress && !payoutFailed && (
+                    {payoutUnderReview && (
+                      <TimelineItem
+                        pending
+                        time={transferTime}
+                        title="Transfer under review"
+                        text="This transfer exceeds the compliance threshold and is being reviewed. Your funds are held safely and will be returned if the transfer is not approved."
+                      />
+                    )}
+
+                    {!payoutInProgress && !payoutFailed && !payoutUnderReview && (
                       <>
                         {creditEntry ? (
                           <TimelineItem complete time={transferTime} text={`${compactAmount(creditEntry)} was sent to the recipient's bank account.`} />
