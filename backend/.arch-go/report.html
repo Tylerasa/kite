@@ -108,7 +108,7 @@
         <div class="badge-footer">
             <h5>Coverage Rate</h5>
             
-                <span>11/23 packages were not considered by any rule.</span>
+                <span>12/25 packages were not considered by any rule.</span>
             
             <span>[Threshold: 0%]</span>
         </div>
@@ -122,15 +122,15 @@
             <table class="summary-run">
                 <tr>
                     <td style="width:40px;font-weight:bold">On</td>
-                    <td style="text-align:right">2026/04/21</td>
+                    <td style="text-align:right">2026/04/24</td>
                 </tr>
                 <tr>
                     <td style="font-weight:bold">At</td>
-                    <td style="text-align:right">22:34:28</td>
+                    <td style="text-align:right">15:26:00</td>
                 </tr>
                 <tr>
                     <td style="font-weight:bold">Took</td>
-                    <td style="text-align:right">1 [ms]</td>
+                    <td style="text-align:right">2 [ms]</td>
                 </tr>
             </table>
         </div>
@@ -189,8 +189,8 @@
 <tr class="rule-verification">
     <td>Dependencies Rules</td>
     <td>Packages matching pattern &#39;**.internal.application.**&#39; should [&#39;not depend on internal packages that matches [[**.internal.infrastructure.**]]&#39;]</td>
-    <td style="text-align:center">6</td>
-    <td style="text-align:center">6</td>
+    <td style="text-align:center">7</td>
+    <td style="text-align:center">7</td>
     <td style="text-align:center">0</td>
     <td class="status" style="color:green">PASS</td>
 </tr>
@@ -320,6 +320,15 @@
 <tr style="color:green">
     <td style="width: 100px;"></td>
     <td class="package-details">
+        Package github.com/kite/internal/application/inquiry
+        
+    </td>
+    <td class="package-details" style="text-align:center">PASS</td>
+</tr>
+
+<tr style="color:green">
+    <td style="width: 100px;"></td>
+    <td class="package-details">
         Package github.com/kite/internal/application/payouts
         
     </td>
@@ -428,6 +437,15 @@
 
 <tr style="color:green">
     <td class="package-details">github.com/kite/internal/application/deposits</td>
+    <td class="package-details" style="text-align:center">0</td>
+    <td class="package-details" style="text-align:center">1</td>
+    <td class="package-details" style="text-align:center">0</td>
+    <td class="package-details" style="text-align:center">0</td>
+    <td class="package-details" style="text-align:center">YES</td>
+</tr>
+
+<tr style="color:green">
+    <td class="package-details">github.com/kite/internal/application/inquiry</td>
     <td class="package-details" style="text-align:center">0</td>
     <td class="package-details" style="text-align:center">1</td>
     <td class="package-details" style="text-align:center">0</td>
@@ -590,6 +608,15 @@
 
 <tr style="color:red">
     <td class="package-details">github.com/kite/internal/infrastructure/rest/middleware</td>
+    <td class="package-details" style="text-align:center">0</td>
+    <td class="package-details" style="text-align:center">0</td>
+    <td class="package-details" style="text-align:center">0</td>
+    <td class="package-details" style="text-align:center">0</td>
+    <td class="package-details" style="text-align:center">NO</td>
+</tr>
+
+<tr style="color:red">
+    <td class="package-details">github.com/kite/internal/infrastructure/store</td>
     <td class="package-details" style="text-align:center">0</td>
     <td class="package-details" style="text-align:center">0</td>
     <td class="package-details" style="text-align:center">0</td>
