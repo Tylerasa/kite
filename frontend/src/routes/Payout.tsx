@@ -80,6 +80,7 @@ export default function Payout() {
   const [selectedBank, setSelectedBank] = useState<Institution | null>(null)
   const [bankPickerOpen, setBankPickerOpen] = useState(false)
   const [bankSearch, setBankSearch] = useState('')
+  const [bankCode, setBankCode] = useState('')
   const [payoutId, setPayoutId] = useState('')
   const [error, setError]       = useState('')
   const [currencyOpen, setCurrencyOpen] = useState(false)
@@ -113,10 +114,14 @@ export default function Payout() {
     })
   }, [institutionList, bankSearch])
 
+  const hasInstitutions = currency === 'NGN' || currency === 'KES'
+  const effectiveBankCode = selectedBank?.bank_code ?? bankCode
+
   // Reset bank selection when currency changes
   useEffect(() => {
     setSelectedBank(null)
     setBankSearch('')
+    setBankCode('')
     setAccountNumber('')
     setInquiry({ status: 'idle' })
   }, [currency])
@@ -125,12 +130,12 @@ export default function Payout() {
   useEffect(() => {
     setInquiry({ status: 'idle' })
     clearTimeout(timerRef.current)
-    if (!accountNumber || !selectedBank) return
+    if (!accountNumber || !effectiveBankCode) return
 
     setInquiry({ status: 'loading' })
     timerRef.current = setTimeout(async () => {
       try {
-        const res = await accountInquiry.mutateAsync({ currency, bank_code: selectedBank.bank_code, account_number: accountNumber })
+        const res = await accountInquiry.mutateAsync({ currency, bank_code: effectiveBankCode, account_number: accountNumber })
         setInquiry({ status: 'resolved', name: res.account_name, bankName: res.bank_name })
       } catch (err) {
         setInquiry({ status: 'error', message: apiError(err) })
@@ -138,7 +143,7 @@ export default function Payout() {
     }, 600)
 
     return () => clearTimeout(timerRef.current)
-  }, [accountNumber, selectedBank, currency])
+  }, [accountNumber, effectiveBankCode, currency])
 
   const SelectedIcon = CURRENCY_ICONS[currency]
   const amountMinor  = Math.round(parseFloat(amount) * 100)
@@ -154,13 +159,13 @@ export default function Payout() {
   }
 
   async function handlePinConfirm(pin: string) {
-    if (inquiry.status !== 'resolved' || !selectedBank) return
+    if (inquiry.status !== 'resolved' || !effectiveBankCode) return
     try {
       const result = await createPayout.mutateAsync({
         source_currency: currency,
         amount: amountMinor,
         recipient_account_number: accountNumber,
-        recipient_bank_code: selectedBank.bank_code,
+        recipient_bank_code: effectiveBankCode,
         recipient_account_name: inquiry.name,
         pin,
       })
@@ -400,20 +405,30 @@ export default function Payout() {
                     placeholder="Account number"
                   />
 
-                  {/* Bank picker */}
-                  <div className="flex flex-col gap-1">
-                    <p className="text-[12px] font-medium text-[#6b7c65]">Bank</p>
-                    <button
-                      type="button"
-                      onClick={() => setBankPickerOpen(true)}
-                      className="flex items-center justify-between border-b border-[#d4d9d0] pb-2 text-left outline-none transition-colors hover:border-[#11160f]"
-                    >
-                      <span className={`text-[15px] ${selectedBank ? 'text-[#11160f]' : 'text-[#b0b8ab]'}`}>
-                        {selectedBank ? selectedBank.name : 'Select bank'}
-                      </span>
-                      <ChevronDown size={16} className="shrink-0 text-[#6b7c65]" />
-                    </button>
-                  </div>
+                  {/* Bank picker / free-text */}
+                  {hasInstitutions ? (
+                    <div className="flex flex-col gap-1">
+                      <p className="text-[12px] font-medium text-[#6b7c65]">Bank</p>
+                      <button
+                        type="button"
+                        onClick={() => setBankPickerOpen(true)}
+                        className="flex items-center justify-between border-b border-[#d4d9d0] pb-2 text-left outline-none transition-colors hover:border-[#11160f]"
+                      >
+                        <span className={`text-[15px] ${selectedBank ? 'text-[#11160f]' : 'text-[#b0b8ab]'}`}>
+                          {selectedBank ? selectedBank.name : 'Select bank'}
+                        </span>
+                        <ChevronDown size={16} className="shrink-0 text-[#6b7c65]" />
+                      </button>
+                    </div>
+                  ) : (
+                    <Field
+                      label="Bank / routing code"
+                      id="bankCode"
+                      value={bankCode}
+                      onChange={setBankCode}
+                      placeholder="e.g. SWIFT, routing number"
+                    />
+                  )}
 
                   {/* Resolved account name */}
                   {inquiry.status !== 'idle' && (
