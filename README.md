@@ -65,6 +65,8 @@ erDiagram
         uuid id PK
         text email UK
         text password_hash
+        text name
+        text pin_hash
         timestamptz created_at
     }
 
@@ -151,6 +153,18 @@ erDiagram
         timestamptz reversed_at
     }
 
+    audit_log {
+        uuid id PK
+        uuid user_id FK
+        varchar operation
+        uuid reference_id
+        varchar status
+        varchar error_code
+        varchar request_id
+        timestamptz created_at
+        timestamptz updated_at
+    }
+
     users ||--o{ accounts : owns
     accounts ||--o{ ledger_entries : receives
     ledger_transactions ||--o{ ledger_entries : groups
@@ -159,6 +173,7 @@ erDiagram
     fx_quotes ||--o| conversions : executes
     users ||--o{ conversions : makes
     users ||--o{ payouts : initiates
+    users ||--o{ audit_log : generates
 ```
 
 ---
@@ -264,7 +279,10 @@ All protected endpoints require `Authorization: Bearer <token>`.
 | `POST` | `/auth/login` | — | Returns JWT |
 | `GET` | `/wallets/balances` | JWT | All 5 currencies |
 | `GET` | `/wallets/transactions` | JWT | `?page=1&limit=20` |
+| `GET` | `/wallets/transactions/:id` | JWT | Full detail with ledger entries |
 | `POST` | `/deposits` | JWT | `Idempotency-Key` header required |
+| `GET` | `/institutions` | JWT | `?currency=NGN\|KES` — bank/mobile-money registry |
+| `POST` | `/payouts/inquiry` | JWT | Account name resolution before payout |
 | `POST` | `/conversions/quote` | JWT | Returns quote with `seconds_left` |
 | `POST` | `/conversions/execute` | JWT | `{"quote_id": "…"}` |
 | `POST` | `/payouts` | JWT | 202 if compliance hold |
