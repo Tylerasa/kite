@@ -24,7 +24,7 @@ func (r *DepositRepo) CreateIfNotExists(ctx context.Context, deposit *models.Dep
 	row := r.db.QueryRow(ctx,
 		`INSERT INTO deposits (id, user_id, idempotency_key, currency, amount, status, created_at)
 		 VALUES ($1, $2, $3, $4, $5, $6, $7)
-		 ON CONFLICT (idempotency_key) DO UPDATE SET idempotency_key = EXCLUDED.idempotency_key
+		 ON CONFLICT (user_id, idempotency_key) DO UPDATE SET idempotency_key = EXCLUDED.idempotency_key
 		 RETURNING id, user_id, idempotency_key, currency, amount, status, created_at`,
 		deposit.ID, deposit.UserID, deposit.IdempotencyKey,
 		string(deposit.Currency), deposit.Amount, deposit.Status, deposit.CreatedAt,
