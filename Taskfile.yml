@@ -1,0 +1,116 @@
+version: '3'
+
+tasks:
+  default:
+    desc: Show available tasks
+    cmds:
+      - task --list
+
+  # ── Docker Compose ─────────────────────────────────────────────────────────
+
+  up:
+    desc: Build images and start all services (postgres, migrate, backend, frontend)
+    cmds:
+      - docker compose up --build -d
+      - docker compose logs -f backend
+
+  down:
+    desc: Stop and remove containers
+    cmds:
+      - docker compose down
+
+  restart:
+    desc: Full teardown + rebuild (drops DB volume too)
+    cmds:
+      - docker compose down -v
+      - docker compose up --build -d
+      - docker compose logs -f backend
+
+  logs:
+    desc: Tail logs for all services (or pass SERVICE= to filter)
+    cmds:
+      - docker compose logs -f {{.SERVICE}}
+
+  ps:
+    desc: Show running container status
+    cmds:
+      - docker compose ps
+
+  # ── Backend ────────────────────────────────────────────────────────────────
+
+  be:build:
+    desc: Build the Go binary
+    dir: backend
+    cmds:
+      - CGO_ENABLED=0 go build -o ./bin/kite ./cmd/http
+
+  be:run:
+    desc: Run the backend binary (requires .env)
+    dir: backend
+    cmds:
+      - ./bin/kite
+
+  be:test:
+    desc: Run all tests with race detector and coverage
+    dir: backend
+    cmds:
+      - go test -v -race -cover -timeout 30s ./...
+
+  be:lint:
+    desc: Run golangci-lint
+    dir: backend
+    cmds:
+      - golangci-lint run ./...
+
+  be:tidy:
+    desc: Tidy and verify go.mod / go.sum
+    dir: backend
+    cmds:
+      - go mod tidy
+      - go mod verify
+
+  # ── Migrations ─────────────────────────────────────────────────────────────
+
+  migrate:up:
+    desc: Run all pending migrations (uses DATABASE_URL env)
+    dir: backend
+    cmds:
+      - migrate -path ./db/migrations -database "$DATABASE_URL" up
+
+  migrate:down:
+    desc: Roll back one migration
+    dir: backend
+    cmds:
+      - migrate -path ./db/migrations -database "$DATABASE_URL" down 1
+
+  migrate:status:
+    desc: Show current migration version
+    dir: backend
+    cmds:
+      - migrate -path ./db/migrations -database "$DATABASE_URL" version
+
+  # ── Frontend ───────────────────────────────────────────────────────────────
+
+  fe:install:
+    desc: Install frontend npm dependencies
+    dir: frontend
+    cmds:
+      - npm ci
+
+  fe:dev:
+    desc: Start Vite dev server (proxies /api to backend)
+    dir: frontend
+    cmds:
+      - npm run dev
+
+  fe:build:
+    desc: Build frontend for production
+    dir: frontend
+    cmds:
+      - npm run build
+
+  fe:preview:
+    desc: Preview the production build locally
+    dir: frontend
+    cmds:
+      - npm run preview

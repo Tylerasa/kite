@@ -1,0 +1,17 @@
+root = "."
+tmp_dir = "tmp"
+
+[build]
+  cmd = "CGO_ENABLED=0 go build -o ./tmp/kite ./cmd/http"
+  bin = "./tmp/kite"
+  delay = 1000
+  exclude_dir = ["tmp", "bin", "db"]
+  include_ext = ["go"]
+  kill_delay = "200ms"
+  rerun_delay = 500
+
+[log]
+  time = false
+
+[misc]
+  clean_on_exit = true

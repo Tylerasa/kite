@@ -1,0 +1,19 @@
+version: 1
+
+threshold:
+  compliance: 100
+  coverage: 0
+
+dependenciesRules:
+  # Domain layer: pure core — no knowledge of application or infrastructure
+  - package: "**.internal.domain.**"
+    shouldNotDependsOn:
+      internal:
+        - "**.internal.application.**"
+        - "**.internal.infrastructure.**"
+
+  # Application layer: orchestrates domain — no knowledge of delivery or DB
+  - package: "**.internal.application.**"
+    shouldNotDependsOn:
+      internal:
+        - "**.internal.infrastructure.**"

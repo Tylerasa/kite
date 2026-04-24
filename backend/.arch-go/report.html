@@ -1,0 +1,614 @@
+
+<!DOCTYPE html>
+<html>
+	<head>
+		<link href="http://maxcdn.bootstrapcdn.com/bootstrap/4.1.1/css/bootstrap.css" rel="stylesheet" id="bootstrap-css" />
+		<link rel="stylesheet" type="text/css" href="report.css" />
+		<title>Arch-Go Execution Report</title>
+	</head>
+    <body>
+	<div class="row" style="padding-top: 10px;">
+		<div class="col-md-11">
+			<h1 style="font-size: 6.5em;">Arch-Go Verification Report</h1>
+		</div>
+		<div class="col-md-1 text-right" style="padding-bottom: 10px;">
+			<img src="logo.png" alt="" class="img-fluid" />
+			<span style="padding-right: 5px;"><b>vmaster</b></span>
+		</div>
+	</div>
+<div class="container summary">
+<div class="row">
+    <div class="col-sm-6">
+        <h3>Rules Summary</h3>
+        <table class="rules-summary">
+    <thead>
+    <tr>
+        <th style="width:200px;">Rule Type</th>
+        <th style="width:120px;">Summary</th>
+        <th style="width:100px;">Total</th>
+        <th style="width:100px;">Succeed</th>
+        <th style="width:100px;">Fail</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr>
+        <td>Content Verification</td>
+        <td>
+            <div class="result_bar">
+                <div class="result_succeeded width-100"></div>
+                <div class="result_legend">0/0</div>
+            </div>
+        </td>
+        <td style="text-align:center;">0</td>
+        <td style="text-align:center;">0</td>
+        <td style="text-align:center;">0</td>
+    </tr>
+    <tr>
+        <td>Dependencies Verification</td>
+        <td>
+            <div class="result_bar">
+                <div class="result_succeeded width-100"></div>
+                <div class="result_legend">2/2</div>
+            </div>
+        </td>
+        <td style="text-align:center;">2</td>
+        <td style="text-align:center;">2</td>
+        <td style="text-align:center;">0</td>
+    </tr>
+    <tr>
+        <td>Functions Verification</td>
+        <td>
+            <div class="result_bar">
+                <div class="result_succeeded width-100"></div>
+                <div class="result_legend">0/0</div>
+            </div>
+        </td>
+        <td style="text-align:center;">0</td>
+        <td style="text-align:center;">0</td>
+        <td style="text-align:center;">0</td>
+    </tr>
+    <tr>
+        <td>Naming Verification</td>
+        <td>
+            <div class="result_bar">
+                <div class="result_succeeded width-100"></div>
+                <div class="result_legend">0/0</div>
+            </div>
+        </td>
+        <td style="text-align:center;">0</td>
+        <td style="text-align:center;">0</td>
+        <td style="text-align:center;">0</td>
+    </tr>
+    </tbody>
+</table>
+</div>
+    <div class="col-sm-2 summary-badges">
+    <div class="badge-progress badge-green">
+        <div class="badge-header">
+            <div class="rate">100%</div>
+        </div>
+        <div class="badge-progressbar">
+            <span data-fill="100%" style="width: 100%;"></span>
+        </div>
+        <div class="badge-footer">
+            <h5>Compliance Rate</h5>
+            <span>2/2 rules were successfully verified</span>
+            <span>[Threshold: 100%]</span>
+        </div>
+    </div>
+</div>
+<div class="col-sm-2 summary-badges">
+    <div class="badge-progress badge-green">
+        <div class="badge-header">
+            <div class="rate">52%</div>
+        </div>
+        <div class="badge-progressbar">
+            <span data-fill="52%" style="width: 52%;"></span>
+        </div>
+        <div class="badge-footer">
+            <h5>Coverage Rate</h5>
+            
+                <span>11/23 packages were not considered by any rule.</span>
+            
+            <span>[Threshold: 0%]</span>
+        </div>
+    </div>
+</div>
+<div class="col-sm-2 summary-badges">
+    <div class="card" style="height:175px">
+        <div class="card-body">
+            <img src="timer.png" alt="" class="summary-timer" />
+            <h4 style="margin-top: 10px;margin-bottom:35px;">Last Update</h4>
+            <table class="summary-run">
+                <tr>
+                    <td style="width:40px;font-weight:bold">On</td>
+                    <td style="text-align:right">2026/04/21</td>
+                </tr>
+                <tr>
+                    <td style="font-weight:bold">At</td>
+                    <td style="text-align:right">22:34:28</td>
+                </tr>
+                <tr>
+                    <td style="font-weight:bold">Took</td>
+                    <td style="text-align:right">1 [ms]</td>
+                </tr>
+            </table>
+        </div>
+    </div>
+</div>
+</div>
+</div>
+<br/>
+<br/>
+<div class="container">
+    <div class="page-header">
+        <h3>Verification Details</h3>
+    </div>
+    <div class="row">
+        <div class="col-md-12">
+
+        <div class="card with-nav-tabs">
+            <div class="card-header content-tabs">
+                <div class="nav nav-tabs">
+                    <a class="nav-item nav-link active" id="nav-compliance-tab" data-toggle="tab" href="#nav-compliance" role="tab" aria-controls="nav-compliance" aria-selected="true">Rules Compliance</a>
+                    <a class="nav-item nav-link" id="nav-content-rules-tab" data-toggle="tab" href="#nav-content-rules" role="tab" aria-controls="nav-content-rules" aria-selected="false">Content Rules Details</a>
+                    <a class="nav-item nav-link" id="nav-dependencies-rules-tab" data-toggle="tab" href="#nav-dependencies-rules" role="tab" aria-controls="nav-dependencies-rules" aria-selected="false">Dependencies Rules Details</a>
+                    <a class="nav-item nav-link" id="nav-function-rules-tab" data-toggle="tab" href="#nav-function-rules" role="tab" aria-controls="nav-function-rules" aria-selected="false">Functions Rules Details</a>
+                    <a class="nav-item nav-link" id="nav-naming-rules-tab" data-toggle="tab" href="#nav-naming-rules" role="tab" aria-controls="nav-naming-rules" aria-selected="false">Naming Rules Details</a>
+                    <a class="nav-item nav-link" id="nav-coverage-tab" data-toggle="tab" href="#nav-coverage" role="tab" aria-controls="nav-coverage" aria-selected="false">Coverage Details</a>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="tab-content" id="nav-tabContent">
+                    <div class="tab-pane fade show active" id="nav-compliance" role="tabpanel" aria-labelledby="nav-compliance-tab">
+                        <div class="container">
+                            <h4>Rule Details</h4>
+<table class="rule-details" border="1" frame="void" rules="rows">
+<thead>
+<tr>
+    <th style="width:200px;">Rule Type</th>
+    <th>Rule Description</th>
+    <th style="width:60px;">Total</th>
+    <th style="width:60px;">Succeed</th>
+    <th style="width:60px;">Fail</th>
+    <th style="width:100px;">Result</th>
+</tr>
+</thead>
+<tbody>
+
+
+<tr class="rule-verification">
+    <td>Dependencies Rules</td>
+    <td>Packages matching pattern &#39;**.internal.domain.**&#39; should [&#39;not depend on internal packages that matches [[**.internal.application.** **.internal.infrastructure.**]]&#39;]</td>
+    <td style="text-align:center">6</td>
+    <td style="text-align:center">6</td>
+    <td style="text-align:center">0</td>
+    <td class="status" style="color:green">PASS</td>
+</tr>
+
+<tr class="rule-verification">
+    <td>Dependencies Rules</td>
+    <td>Packages matching pattern &#39;**.internal.application.**&#39; should [&#39;not depend on internal packages that matches [[**.internal.infrastructure.**]]&#39;]</td>
+    <td style="text-align:center">6</td>
+    <td style="text-align:center">6</td>
+    <td style="text-align:center">0</td>
+    <td class="status" style="color:green">PASS</td>
+</tr>
+
+
+
+
+</tbody>
+</table>
+</div>
+                    </div>
+                    <div class="tab-pane fade" id="nav-content-rules" role="tabpanel" aria-labelledby="nav-content-rules-tab">
+                        <div class="container">
+                            <h4>Content Rules Details</h4>
+
+<ul>
+<li>There are no contents rules.</li>
+</ul>
+
+</div>
+                    </div>
+                    <div class="tab-pane fade" id="nav-dependencies-rules" role="tabpanel" aria-labelledby="nav-dependencies-rules-tab">
+                        <div class="container">
+                            <h4>Dependencies Rules Details</h4>
+
+<table class="rule-details" border="1" frame="void" rules="rows">
+<thead>
+<tr>
+    <th colspan="2">Rule Description</th>
+    <th style="width:100px;">Result</th>
+</tr>
+</thead>
+<tbody>
+
+<tr class="rule-verification">
+    <td colspan="2"><b>Rule: Packages matching pattern &#39;**.internal.domain.**&#39; should [&#39;not depend on internal packages that matches [[**.internal.application.** **.internal.infrastructure.**]]&#39;]</b></td>
+    <td class="status" style="color:green">PASS</td>
+</tr>
+
+<tr style="color:green">
+    <td style="width: 100px;"></td>
+    <td class="package-details">
+        Package github.com/kite/internal/domain/exceptions
+        
+    </td>
+    <td class="package-details" style="text-align:center">PASS</td>
+</tr>
+
+<tr style="color:green">
+    <td style="width: 100px;"></td>
+    <td class="package-details">
+        Package github.com/kite/internal/domain/models
+        
+    </td>
+    <td class="package-details" style="text-align:center">PASS</td>
+</tr>
+
+<tr style="color:green">
+    <td style="width: 100px;"></td>
+    <td class="package-details">
+        Package github.com/kite/internal/domain/ports/in
+        
+    </td>
+    <td class="package-details" style="text-align:center">PASS</td>
+</tr>
+
+<tr style="color:green">
+    <td style="width: 100px;"></td>
+    <td class="package-details">
+        Package github.com/kite/internal/domain/ports/out
+        
+    </td>
+    <td class="package-details" style="text-align:center">PASS</td>
+</tr>
+
+<tr style="color:green">
+    <td style="width: 100px;"></td>
+    <td class="package-details">
+        Package github.com/kite/internal/domain/ports/out/fakes
+        
+    </td>
+    <td class="package-details" style="text-align:center">PASS</td>
+</tr>
+
+<tr style="color:green">
+    <td style="width: 100px;"></td>
+    <td class="package-details">
+        Package github.com/kite/internal/domain/services
+        
+    </td>
+    <td class="package-details" style="text-align:center">PASS</td>
+</tr>
+
+
+<tr class="rule-verification">
+    <td colspan="2"><b>Rule: Packages matching pattern &#39;**.internal.application.**&#39; should [&#39;not depend on internal packages that matches [[**.internal.infrastructure.**]]&#39;]</b></td>
+    <td class="status" style="color:green">PASS</td>
+</tr>
+
+<tr style="color:green">
+    <td style="width: 100px;"></td>
+    <td class="package-details">
+        Package github.com/kite/internal/application/auth
+        
+    </td>
+    <td class="package-details" style="text-align:center">PASS</td>
+</tr>
+
+<tr style="color:green">
+    <td style="width: 100px;"></td>
+    <td class="package-details">
+        Package github.com/kite/internal/application/conversions
+        
+    </td>
+    <td class="package-details" style="text-align:center">PASS</td>
+</tr>
+
+<tr style="color:green">
+    <td style="width: 100px;"></td>
+    <td class="package-details">
+        Package github.com/kite/internal/application/deposits
+        
+    </td>
+    <td class="package-details" style="text-align:center">PASS</td>
+</tr>
+
+<tr style="color:green">
+    <td style="width: 100px;"></td>
+    <td class="package-details">
+        Package github.com/kite/internal/application/payouts
+        
+    </td>
+    <td class="package-details" style="text-align:center">PASS</td>
+</tr>
+
+<tr style="color:green">
+    <td style="width: 100px;"></td>
+    <td class="package-details">
+        Package github.com/kite/internal/application/transactions
+        
+    </td>
+    <td class="package-details" style="text-align:center">PASS</td>
+</tr>
+
+<tr style="color:green">
+    <td style="width: 100px;"></td>
+    <td class="package-details">
+        Package github.com/kite/internal/application/wallet
+        
+    </td>
+    <td class="package-details" style="text-align:center">PASS</td>
+</tr>
+
+
+</tbody>
+</table>
+
+</div>
+                    </div>
+                    <div class="tab-pane fade" id="nav-function-rules" role="tabpanel" aria-labelledby="nav-function-rules-tab">
+                        <div class="container">
+                            <h4>Functions Rules Details</h4>
+
+<ul>
+<li>There are no functions rules.</li>
+</ul>
+
+
+</div>
+                    </div>
+                    <div class="tab-pane fade" id="nav-naming-rules" role="tabpanel" aria-labelledby="nav-naming-rules-tab">
+                        <div class="container">
+                            <h4>Naming Rules Details</h4>
+
+<ul>
+<li>There are no naming rules.</li>
+</ul>
+
+</div>
+                    </div>
+                    <div class="tab-pane fade" id="nav-coverage" role="tabpanel" aria-labelledby="nav-coverage-tab">
+                        <div class="container">
+                            <h4>Coverage Details</h4>
+<table class="rule-details" border="1" frame="void" rules="rows">
+<thead>
+<tr>
+    <th rowspan="2">Package</th>
+    <th colspan="4">Architecture Rules</th>
+    <th rowspan="2" style="width:150px;">Covered</th>
+</tr>
+<tr>
+    <th style="width:100px;font-weight:normal">Content</th>
+    <th style="width:100px;font-weight:normal">Dependencies</th>
+    <th style="width:100px;font-weight:normal">Functions</th>
+    <th style="width:100px;font-weight:normal">Naming</th>
+</tr>
+</thead>
+<tbody>
+
+<tr style="color:red">
+    <td class="package-details">github.com/kite/cmd/http</td>
+    <td class="package-details" style="text-align:center">0</td>
+    <td class="package-details" style="text-align:center">0</td>
+    <td class="package-details" style="text-align:center">0</td>
+    <td class="package-details" style="text-align:center">0</td>
+    <td class="package-details" style="text-align:center">NO</td>
+</tr>
+
+<tr style="color:red">
+    <td class="package-details">github.com/kite/docs</td>
+    <td class="package-details" style="text-align:center">0</td>
+    <td class="package-details" style="text-align:center">0</td>
+    <td class="package-details" style="text-align:center">0</td>
+    <td class="package-details" style="text-align:center">0</td>
+    <td class="package-details" style="text-align:center">NO</td>
+</tr>
+
+<tr style="color:green">
+    <td class="package-details">github.com/kite/internal/application/auth</td>
+    <td class="package-details" style="text-align:center">0</td>
+    <td class="package-details" style="text-align:center">1</td>
+    <td class="package-details" style="text-align:center">0</td>
+    <td class="package-details" style="text-align:center">0</td>
+    <td class="package-details" style="text-align:center">YES</td>
+</tr>
+
+<tr style="color:green">
+    <td class="package-details">github.com/kite/internal/application/conversions</td>
+    <td class="package-details" style="text-align:center">0</td>
+    <td class="package-details" style="text-align:center">1</td>
+    <td class="package-details" style="text-align:center">0</td>
+    <td class="package-details" style="text-align:center">0</td>
+    <td class="package-details" style="text-align:center">YES</td>
+</tr>
+
+<tr style="color:green">
+    <td class="package-details">github.com/kite/internal/application/deposits</td>
+    <td class="package-details" style="text-align:center">0</td>
+    <td class="package-details" style="text-align:center">1</td>
+    <td class="package-details" style="text-align:center">0</td>
+    <td class="package-details" style="text-align:center">0</td>
+    <td class="package-details" style="text-align:center">YES</td>
+</tr>
+
+<tr style="color:green">
+    <td class="package-details">github.com/kite/internal/application/payouts</td>
+    <td class="package-details" style="text-align:center">0</td>
+    <td class="package-details" style="text-align:center">1</td>
+    <td class="package-details" style="text-align:center">0</td>
+    <td class="package-details" style="text-align:center">0</td>
+    <td class="package-details" style="text-align:center">YES</td>
+</tr>
+
+<tr style="color:green">
+    <td class="package-details">github.com/kite/internal/application/transactions</td>
+    <td class="package-details" style="text-align:center">0</td>
+    <td class="package-details" style="text-align:center">1</td>
+    <td class="package-details" style="text-align:center">0</td>
+    <td class="package-details" style="text-align:center">0</td>
+    <td class="package-details" style="text-align:center">YES</td>
+</tr>
+
+<tr style="color:green">
+    <td class="package-details">github.com/kite/internal/application/wallet</td>
+    <td class="package-details" style="text-align:center">0</td>
+    <td class="package-details" style="text-align:center">1</td>
+    <td class="package-details" style="text-align:center">0</td>
+    <td class="package-details" style="text-align:center">0</td>
+    <td class="package-details" style="text-align:center">YES</td>
+</tr>
+
+<tr style="color:green">
+    <td class="package-details">github.com/kite/internal/domain/exceptions</td>
+    <td class="package-details" style="text-align:center">0</td>
+    <td class="package-details" style="text-align:center">1</td>
+    <td class="package-details" style="text-align:center">0</td>
+    <td class="package-details" style="text-align:center">0</td>
+    <td class="package-details" style="text-align:center">YES</td>
+</tr>
+
+<tr style="color:green">
+    <td class="package-details">github.com/kite/internal/domain/models</td>
+    <td class="package-details" style="text-align:center">0</td>
+    <td class="package-details" style="text-align:center">1</td>
+    <td class="package-details" style="text-align:center">0</td>
+    <td class="package-details" style="text-align:center">0</td>
+    <td class="package-details" style="text-align:center">YES</td>
+</tr>
+
+<tr style="color:green">
+    <td class="package-details">github.com/kite/internal/domain/ports/in</td>
+    <td class="package-details" style="text-align:center">0</td>
+    <td class="package-details" style="text-align:center">1</td>
+    <td class="package-details" style="text-align:center">0</td>
+    <td class="package-details" style="text-align:center">0</td>
+    <td class="package-details" style="text-align:center">YES</td>
+</tr>
+
+<tr style="color:green">
+    <td class="package-details">github.com/kite/internal/domain/ports/out</td>
+    <td class="package-details" style="text-align:center">0</td>
+    <td class="package-details" style="text-align:center">1</td>
+    <td class="package-details" style="text-align:center">0</td>
+    <td class="package-details" style="text-align:center">0</td>
+    <td class="package-details" style="text-align:center">YES</td>
+</tr>
+
+<tr style="color:green">
+    <td class="package-details">github.com/kite/internal/domain/ports/out/fakes</td>
+    <td class="package-details" style="text-align:center">0</td>
+    <td class="package-details" style="text-align:center">1</td>
+    <td class="package-details" style="text-align:center">0</td>
+    <td class="package-details" style="text-align:center">0</td>
+    <td class="package-details" style="text-align:center">YES</td>
+</tr>
+
+<tr style="color:green">
+    <td class="package-details">github.com/kite/internal/domain/services</td>
+    <td class="package-details" style="text-align:center">0</td>
+    <td class="package-details" style="text-align:center">1</td>
+    <td class="package-details" style="text-align:center">0</td>
+    <td class="package-details" style="text-align:center">0</td>
+    <td class="package-details" style="text-align:center">YES</td>
+</tr>
+
+<tr style="color:red">
+    <td class="package-details">github.com/kite/internal/infrastructure/adapters</td>
+    <td class="package-details" style="text-align:center">0</td>
+    <td class="package-details" style="text-align:center">0</td>
+    <td class="package-details" style="text-align:center">0</td>
+    <td class="package-details" style="text-align:center">0</td>
+    <td class="package-details" style="text-align:center">NO</td>
+</tr>
+
+<tr style="color:red">
+    <td class="package-details">github.com/kite/internal/infrastructure/bootstrap</td>
+    <td class="package-details" style="text-align:center">0</td>
+    <td class="package-details" style="text-align:center">0</td>
+    <td class="package-details" style="text-align:center">0</td>
+    <td class="package-details" style="text-align:center">0</td>
+    <td class="package-details" style="text-align:center">NO</td>
+</tr>
+
+<tr style="color:red">
+    <td class="package-details">github.com/kite/internal/infrastructure/di</td>
+    <td class="package-details" style="text-align:center">0</td>
+    <td class="package-details" style="text-align:center">0</td>
+    <td class="package-details" style="text-align:center">0</td>
+    <td class="package-details" style="text-align:center">0</td>
+    <td class="package-details" style="text-align:center">NO</td>
+</tr>
+
+<tr style="color:red">
+    <td class="package-details">github.com/kite/internal/infrastructure/jobs</td>
+    <td class="package-details" style="text-align:center">0</td>
+    <td class="package-details" style="text-align:center">0</td>
+    <td class="package-details" style="text-align:center">0</td>
+    <td class="package-details" style="text-align:center">0</td>
+    <td class="package-details" style="text-align:center">NO</td>
+</tr>
+
+<tr style="color:red">
+    <td class="package-details">github.com/kite/internal/infrastructure/repositories</td>
+    <td class="package-details" style="text-align:center">0</td>
+    <td class="package-details" style="text-align:center">0</td>
+    <td class="package-details" style="text-align:center">0</td>
+    <td class="package-details" style="text-align:center">0</td>
+    <td class="package-details" style="text-align:center">NO</td>
+</tr>
+
+<tr style="color:red">
+    <td class="package-details">github.com/kite/internal/infrastructure/rest</td>
+    <td class="package-details" style="text-align:center">0</td>
+    <td class="package-details" style="text-align:center">0</td>
+    <td class="package-details" style="text-align:center">0</td>
+    <td class="package-details" style="text-align:center">0</td>
+    <td class="package-details" style="text-align:center">NO</td>
+</tr>
+
+<tr style="color:red">
+    <td class="package-details">github.com/kite/internal/infrastructure/rest/apiutil</td>
+    <td class="package-details" style="text-align:center">0</td>
+    <td class="package-details" style="text-align:center">0</td>
+    <td class="package-details" style="text-align:center">0</td>
+    <td class="package-details" style="text-align:center">0</td>
+    <td class="package-details" style="text-align:center">NO</td>
+</tr>
+
+<tr style="color:red">
+    <td class="package-details">github.com/kite/internal/infrastructure/rest/controllers</td>
+    <td class="package-details" style="text-align:center">0</td>
+    <td class="package-details" style="text-align:center">0</td>
+    <td class="package-details" style="text-align:center">0</td>
+    <td class="package-details" style="text-align:center">0</td>
+    <td class="package-details" style="text-align:center">NO</td>
+</tr>
+
+<tr style="color:red">
+    <td class="package-details">github.com/kite/internal/infrastructure/rest/middleware</td>
+    <td class="package-details" style="text-align:center">0</td>
+    <td class="package-details" style="text-align:center">0</td>
+    <td class="package-details" style="text-align:center">0</td>
+    <td class="package-details" style="text-align:center">0</td>
+    <td class="package-details" style="text-align:center">NO</td>
+</tr>
+
+</tbody>
+</table>
+</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<hr/>
+        Report generated by <a href='https://github.com/arch-go/arch-go'>Arch-Go</a> vmaster
+        <script src="http://cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+        <script src="http://maxcdn.bootstrapcdn.com/bootstrap/4.1.1/js/bootstrap.js"></script>
+    </body>
+</html>

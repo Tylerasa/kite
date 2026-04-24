@@ -1,46 +1,108 @@
 version: '3'
 
+dotenv: ['.env']
+
 tasks:
   default:
-    deps: [install, build]
+    desc: Show available tasks
+    cmds:
+      - task --list
+
+  # ── Build ──────────────────────────────────────────────────────────────────
 
   install:
-    desc: Download Go dependencies
+    desc: Download Go module dependencies
     cmds:
       - go mod download
 
+  tidy:
+    desc: Tidy and verify go.mod / go.sum
+    cmds:
+      - go mod tidy
+      - go mod verify
+
   build:
-    desc: Build the binary
+    desc: Build the binary to ./bin/kite
     cmds:
       - CGO_ENABLED=0 go build -o ./bin/kite ./cmd/http
 
-  start:dev:
-    desc: Run with hot reload (requires air)
-    cmds:
-      - air -c .air.toml
+  # ── Run ────────────────────────────────────────────────────────────────────
 
   start:
-    desc: Run the binary
+    desc: Run the compiled binary (requires .env)
+    deps: [build]
     cmds:
       - ./bin/kite
 
-  test:
-    desc: Run tests with coverage
+  start:dev:
+    desc: Hot-reload with air (requires `go install github.com/air-verse/air@latest`)
     cmds:
-      - go test -v -race -cover -timeout 30s ./...
+      - air -c .air.toml
+
+  # ── Test ───────────────────────────────────────────────────────────────────
+
+  test:
+    desc: Run all unit tests with race detector
+    cmds:
+      - go test -v -race -timeout 30s ./...
+
+  test:cover:
+    desc: Run tests and open HTML coverage report
+    cmds:
+      - go test -race -coverprofile=coverage.out -timeout 30s ./...
+      - go tool cover -html=coverage.out
+
+  test:ci:
+    desc: Tests formatted for CI (no -v, machine-readable coverage)
+    cmds:
+      - go test -race -coverprofile=coverage.out -covermode=atomic -timeout 30s ./...
 
   test:integration:
-    desc: Run integration tests (requires running Postgres)
+    desc: Integration tests against a live Postgres (requires DATABASE_URL)
     cmds:
       - go test -v -race -timeout 60s -tags integration ./...
+
+  # ── Docs ───────────────────────────────────────────────────────────────────
+
+  swag:
+    desc: Generate / refresh Swagger docs (requires swag CLI)
+    cmds:
+      - swag init -g cmd/http/main.go --output docs
+
+  # ── Code quality ───────────────────────────────────────────────────────────
+
+  fmt:
+    desc: Format all Go source files
+    cmds:
+      - gofmt -w .
+
+  vet:
+    desc: Run go vet
+    cmds:
+      - go vet ./...
 
   lint:
     desc: Run golangci-lint
     cmds:
       - golangci-lint run ./...
 
+  check:
+    desc: fmt + vet + lint + test in one pass
+    cmds:
+      - task: fmt
+      - task: vet
+      - task: lint
+      - task: test
+
+  # ── Migrations ─────────────────────────────────────────────────────────────
+
+  migrate:install:
+    desc: Install golang-migrate CLI
+    cmds:
+      - go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@latest
+
   migrate:up:
-    desc: Run migrations up
+    desc: Apply all pending migrations
     cmds:
       - migrate -path ./db/migrations -database "$DATABASE_URL" up
 
@@ -48,3 +110,18 @@ tasks:
     desc: Roll back one migration
     cmds:
       - migrate -path ./db/migrations -database "$DATABASE_URL" down 1
+
+  migrate:status:
+    desc: Show current migration version
+    cmds:
+      - migrate -path ./db/migrations -database "$DATABASE_URL" version
+
+  migrate:drop:
+    desc: "Drop the entire schema — DESTRUCTIVE, local dev only"
+    prompt: This will destroy all data. Continue?
+    cmds:
+      - migrate -path ./db/migrations -database "$DATABASE_URL" drop -f
+
+  arch:check:
+    desc: "Validate architecture rules"
+    cmd: arch-go --html
