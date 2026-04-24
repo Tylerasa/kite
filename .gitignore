@@ -6,7 +6,6 @@
 backend/vendor/
 backend/*.out
 backend/tmp/
-backend/docs/
 
 # Node
 frontend/node_modules/

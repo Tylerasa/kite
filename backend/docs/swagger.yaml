@@ -1,0 +1,617 @@
+basePath: /
+definitions:
+  apiutil.ErrorBody:
+    properties:
+      code:
+        type: string
+      details: {}
+      message:
+        type: string
+    type: object
+  apiutil.ErrorResponse:
+    properties:
+      error:
+        $ref: '#/definitions/apiutil.ErrorBody'
+    type: object
+  controllers.balanceItem:
+    properties:
+      amount:
+        type: integer
+      currency:
+        type: string
+      display:
+        description: human-readable e.g. "100.00"
+        type: string
+    type: object
+  controllers.balancesResponse:
+    properties:
+      balances:
+        items:
+          $ref: '#/definitions/controllers.balanceItem'
+        type: array
+    type: object
+  controllers.conversionResponse:
+    properties:
+      amount_in:
+        type: integer
+      amount_out:
+        type: integer
+      created_at:
+        type: string
+      fee:
+        type: integer
+      from_currency:
+        type: string
+      id:
+        type: string
+      quoted_rate:
+        type: string
+      status:
+        type: string
+      to_currency:
+        type: string
+    type: object
+  controllers.depositRequest:
+    properties:
+      amount:
+        minimum: 1
+        type: integer
+      currency:
+        type: string
+    required:
+    - amount
+    - currency
+    type: object
+  controllers.depositResponse:
+    properties:
+      amount:
+        type: integer
+      created_at:
+        type: string
+      currency:
+        type: string
+      id:
+        type: string
+      idempotency_key:
+        type: string
+      status:
+        type: string
+    type: object
+  controllers.executeRequest:
+    properties:
+      quote_id:
+        type: string
+    required:
+    - quote_id
+    type: object
+  controllers.inquiryRequest:
+    properties:
+      account_number:
+        type: string
+      bank_code:
+        type: string
+      currency:
+        type: string
+    required:
+    - account_number
+    - bank_code
+    - currency
+    type: object
+  controllers.inquiryResponse:
+    properties:
+      account_name:
+        type: string
+      account_number:
+        type: string
+      bank_code:
+        type: string
+      bank_name:
+        type: string
+      institution_type:
+        type: string
+    type: object
+  controllers.institutionResponse:
+    properties:
+      bank_code:
+        type: string
+      currency:
+        type: string
+      logo:
+        type: string
+      name:
+        type: string
+      type:
+        type: string
+    type: object
+  controllers.loginRequest:
+    properties:
+      email:
+        type: string
+      password:
+        type: string
+    required:
+    - email
+    - password
+    type: object
+  controllers.payoutRequest:
+    properties:
+      amount:
+        minimum: 1
+        type: integer
+      recipient_account_name:
+        type: string
+      recipient_account_number:
+        type: string
+      recipient_bank_code:
+        type: string
+      source_currency:
+        type: string
+    required:
+    - amount
+    - recipient_account_name
+    - recipient_account_number
+    - recipient_bank_code
+    - source_currency
+    type: object
+  controllers.payoutResponse:
+    properties:
+      amount:
+        type: integer
+      compliance_flagged:
+        type: boolean
+      created_at:
+        type: string
+      failure_reason:
+        type: string
+      id:
+        type: string
+      recipient_account_name:
+        type: string
+      recipient_account_number:
+        type: string
+      recipient_bank_code:
+        type: string
+      reversed_at:
+        type: string
+      source_currency:
+        type: string
+      status:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  controllers.quoteRequest:
+    properties:
+      amount_in:
+        minimum: 1
+        type: integer
+      from_currency:
+        type: string
+      to_currency:
+        type: string
+    required:
+    - amount_in
+    - from_currency
+    - to_currency
+    type: object
+  controllers.quoteResponse:
+    properties:
+      amount_in:
+        type: integer
+      amount_out:
+        type: integer
+      expires_at:
+        type: string
+      fee:
+        type: integer
+      from_currency:
+        type: string
+      id:
+        type: string
+      market_rate:
+        type: string
+      quoted_rate:
+        type: string
+      seconds_left:
+        type: integer
+      to_currency:
+        type: string
+    type: object
+  controllers.signupRequest:
+    properties:
+      email:
+        type: string
+      password:
+        minLength: 8
+        type: string
+    required:
+    - email
+    - password
+    type: object
+  controllers.tokenResponse:
+    properties:
+      token:
+        type: string
+      user_id:
+        type: string
+    type: object
+  controllers.transactionsResponse:
+    properties:
+      items: {}
+      page:
+        type: integer
+      total:
+        type: integer
+      total_pages:
+        type: integer
+    type: object
+host: localhost:8085
+info:
+  contact:
+    name: Kite Support
+  description: Multi-currency wallet — deposits, FX conversions, and payouts.
+  title: Kite API
+  version: "1.0"
+paths:
+  /auth/login:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Credentials
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/controllers.loginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/controllers.tokenResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apiutil.ErrorResponse'
+        "401":
+          description: invalid credentials
+          schema:
+            $ref: '#/definitions/apiutil.ErrorResponse'
+      summary: Authenticate and receive a JWT
+      tags:
+      - auth
+  /auth/signup:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Credentials
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/controllers.signupRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/controllers.tokenResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apiutil.ErrorResponse'
+        "409":
+          description: email already registered
+          schema:
+            $ref: '#/definitions/apiutil.ErrorResponse'
+      summary: Register a new user
+      tags:
+      - auth
+  /conversions/execute:
+    post:
+      consumes:
+      - application/json
+      description: Atomically debits the source wallet and credits the target wallet.
+        A quote can only be executed once.
+      parameters:
+      - description: Quote to execute
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/controllers.executeRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/controllers.conversionResponse'
+        "400":
+          description: quote_expired or invalid_quote_id
+          schema:
+            $ref: '#/definitions/apiutil.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/apiutil.ErrorResponse'
+        "409":
+          description: quote_already_executed
+          schema:
+            $ref: '#/definitions/apiutil.ErrorResponse'
+        "422":
+          description: insufficient_funds
+          schema:
+            $ref: '#/definitions/apiutil.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Execute a previously obtained FX quote
+      tags:
+      - conversions
+  /conversions/quote:
+    post:
+      consumes:
+      - application/json
+      description: Returns a locked rate valid for 45 seconds. Pass the quote ID to
+        /conversions/execute to settle.
+      parameters:
+      - description: Conversion parameters
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/controllers.quoteRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/controllers.quoteResponse'
+        "400":
+          description: invalid currency
+          schema:
+            $ref: '#/definitions/apiutil.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/apiutil.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Request an FX conversion quote
+      tags:
+      - conversions
+  /deposits:
+    post:
+      consumes:
+      - application/json
+      description: Idempotent — repeated calls with the same Idempotency-Key return
+        the original deposit (HTTP 200) without moving money twice.
+      parameters:
+      - description: Unique key per deposit attempt (e.g. crypto.randomUUID())
+        in: header
+        name: Idempotency-Key
+        required: true
+        type: string
+      - description: Deposit details
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/controllers.depositRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Duplicate — existing deposit returned
+          schema:
+            $ref: '#/definitions/controllers.depositResponse'
+        "201":
+          description: New deposit created
+          schema:
+            $ref: '#/definitions/controllers.depositResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apiutil.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/apiutil.ErrorResponse'
+        "422":
+          description: invalid currency
+          schema:
+            $ref: '#/definitions/apiutil.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Simulate a deposit into a currency wallet
+      tags:
+      - deposits
+  /institutions:
+    get:
+      description: Returns all banks and mobile money providers available for payouts
+        in the given currency
+      parameters:
+      - description: Currency code (NGN, KES)
+        in: query
+        name: currency
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/controllers.institutionResponse'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apiutil.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: List institutions for a currency
+      tags:
+      - institutions
+  /payouts:
+    post:
+      consumes:
+      - application/json
+      description: Holds funds immediately. Settlement is async (poll GET /payouts/:id).
+        NGN payouts over ₦500,000 are placed in compliance review (202).
+      parameters:
+      - description: Payout details
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/controllers.payoutRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Payout accepted
+          schema:
+            $ref: '#/definitions/controllers.payoutResponse'
+        "202":
+          description: Compliance review — payout held
+          schema:
+            $ref: '#/definitions/controllers.payoutResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apiutil.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/apiutil.ErrorResponse'
+        "422":
+          description: insufficient_funds
+          schema:
+            $ref: '#/definitions/apiutil.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Initiate a payout to a bank account
+      tags:
+      - payouts
+  /payouts/{id}:
+    get:
+      description: 'Poll this endpoint after initiating a payout. Status transitions:
+        pending → processing → successful | failed | review.'
+      parameters:
+      - description: Payout UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/controllers.payoutResponse'
+        "400":
+          description: invalid UUID
+          schema:
+            $ref: '#/definitions/apiutil.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/apiutil.ErrorResponse'
+        "404":
+          description: payout not found
+          schema:
+            $ref: '#/definitions/apiutil.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get payout status
+      tags:
+      - payouts
+  /payouts/inquiry:
+    post:
+      consumes:
+      - application/json
+      description: 'Performs a name enquiry: given an account number and bank code,
+        returns the registered account holder name'
+      parameters:
+      - description: Inquiry request
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/controllers.inquiryRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/controllers.inquiryResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apiutil.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Resolve recipient account name
+      tags:
+      - payouts
+  /wallets/balances:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/controllers.balancesResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/apiutil.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: List wallet balances for all currencies
+      tags:
+      - wallet
+  /wallets/transactions:
+    get:
+      parameters:
+      - description: Page number (default 1)
+        in: query
+        name: page
+        type: integer
+      - description: Items per page (default 20, max 100)
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/controllers.transactionsResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/apiutil.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Paginated transaction history
+      tags:
+      - wallet
+securityDefinitions:
+  BearerAuth:
+    description: 'Enter: Bearer <token>'
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"
