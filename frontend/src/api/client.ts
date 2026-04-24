@@ -1,7 +1,7 @@
 import axios from 'axios'
 
 const client = axios.create({
-  baseURL: typeof window !== 'undefined' ? '' : (import.meta.env.VITE_API_URL ?? ''),
+  baseURL: '',
   headers: { 'Content-Type': 'application/json' },
 })
 
@@ -12,11 +12,13 @@ client.interceptors.request.use((config) => {
   return config
 })
 
-// On 401, clear token and redirect to login
+// On 401, clear token and redirect to login — but not for auth endpoints
+// (wrong password on /auth/login should show an error, not cause a reload)
 client.interceptors.response.use(
   (res) => res,
   (err) => {
-    if (err.response?.status === 401) {
+    const isAuthEndpoint = err.config?.url?.startsWith('/auth/')
+    if (err.response?.status === 401 && !isAuthEndpoint) {
       localStorage.removeItem('kite_token')
       localStorage.removeItem('kite_user_id')
       window.location.href = '/login'

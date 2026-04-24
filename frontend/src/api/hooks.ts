@@ -3,8 +3,23 @@ import client from './client'
 
 // --- Types ---
 export interface Balance { currency: string; amount: number; display: string }
-export interface Transaction { id: string; type: string; reference_id: string; created_at: string }
+export interface Transaction { id: string; type: string; reference_id: string; time: string; amount: number; currency: string; direction: string; status: string }
 export interface HistoryResult { items: Transaction[]; total: number; page: number; total_pages: number }
+export interface TransactionEntry {
+  id: string
+  amount: number
+  direction: string
+  currency: string
+  account_type: string
+  created_at: string
+}
+export interface TransactionDetail {
+  id: string
+  type: string
+  reference_id: string
+  created_at: string
+  entries: TransactionEntry[]
+}
 export interface Quote {
   id: string; from_currency: string; to_currency: string
   market_rate: string; quoted_rate: string
@@ -25,19 +40,26 @@ export interface Deposit {
   id: string; currency: string; amount: number; status: string
   idempotency_key: string; created_at: string
 }
+export interface InquiryResult {
+  account_name: string; account_number: string
+  bank_code: string; bank_name: string; institution_type: string
+}
+export interface Institution {
+  type: string; bank_code: string; name: string; currency: string; logo?: string
+}
 
 // --- Auth ---
 export function useSignup() {
   return useMutation({
-    mutationFn: (data: { email: string; password: string }) =>
-      client.post<{ token: string; user_id: string }>('/auth/signup', data).then(r => r.data),
+    mutationFn: (data: { name: string; email: string; password: string; pin: string }) =>
+      client.post<{ token: string; user_id: string; name: string }>('/auth/signup', data).then(r => r.data),
   })
 }
 
 export function useLogin() {
   return useMutation({
     mutationFn: (data: { email: string; password: string }) =>
-      client.post<{ token: string; user_id: string }>('/auth/login', data).then(r => r.data),
+      client.post<{ token: string; user_id: string; name: string }>('/auth/login', data).then(r => r.data),
   })
 }
 
@@ -50,10 +72,18 @@ export function useBalances() {
   })
 }
 
-export function useTransactions(page = 1) {
+export function useTransactions(page = 1, limit = 20) {
   return useQuery({
-    queryKey: ['transactions', page],
-    queryFn: () => client.get<HistoryResult>(`/wallets/transactions?page=${page}&limit=20`).then(r => r.data),
+    queryKey: ['transactions', page, limit],
+    queryFn: () => client.get<HistoryResult>(`/wallets/transactions?page=${page}&limit=${limit}`).then(r => r.data),
+  })
+}
+
+export function useTransaction(id: string) {
+  return useQuery({
+    queryKey: ['transaction', id],
+    queryFn: () => client.get<TransactionDetail>(`/wallets/transactions/${id}`).then(r => r.data),
+    enabled: !!id,
   })
 }
 
@@ -61,8 +91,8 @@ export function useTransactions(page = 1) {
 export function useDeposit() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: ({ currency, amount, idempotencyKey }: { currency: string; amount: number; idempotencyKey: string }) =>
-      client.post<Deposit>('/deposits', { currency, amount }, {
+    mutationFn: ({ currency, amount, idempotencyKey, pin }: { currency: string; amount: number; idempotencyKey: string; pin: string }) =>
+      client.post<Deposit>('/deposits', { currency, amount, pin }, {
         headers: { 'Idempotency-Key': idempotencyKey },
       }).then(r => r.data),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['balances'] }),
@@ -80,12 +110,30 @@ export function useCreateQuote() {
 export function useExecuteConversion() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (quoteId: string) =>
-      client.post<Conversion>('/conversions/execute', { quote_id: quoteId }).then(r => r.data),
+    mutationFn: ({ quoteId, pin }: { quoteId: string; pin: string }) =>
+      client.post<Conversion>('/conversions/execute', { quote_id: quoteId, pin }).then(r => r.data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['balances'] })
       qc.invalidateQueries({ queryKey: ['transactions'] })
     },
+  })
+}
+
+// --- Institutions ---
+export function useInstitutions(currency: string) {
+  return useQuery({
+    queryKey: ['institutions', currency],
+    queryFn: () => client.get<Institution[]>(`/institutions?currency=${currency}`).then(r => r.data),
+    enabled: !!currency,
+    staleTime: 5 * 60 * 1000,
+  })
+}
+
+// --- Account Inquiry ---
+export function useAccountInquiry() {
+  return useMutation({
+    mutationFn: (data: { currency: string; bank_code: string; account_number: string }) =>
+      client.post<InquiryResult>('/payouts/inquiry', data).then(r => r.data),
   })
 }
 
@@ -96,6 +144,7 @@ export function useCreatePayout() {
     mutationFn: (data: {
       source_currency: string; amount: number
       recipient_account_number: string; recipient_bank_code: string; recipient_account_name: string
+      pin: string
     }) => client.post<Payout>('/payouts', data).then(r => r.data),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['balances'] }),
   })
