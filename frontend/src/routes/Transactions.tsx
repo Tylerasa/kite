@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { ChevronRight } from 'lucide-react'
 import { Icons } from '../../public/assets/svgs/icons'
-import { useTransactions } from '../api/hooks'
+import { useTransactions, type Transaction } from '../api/hooks'
 import { Layout, Spinner, formatAmount } from '../components/Layout'
 
 const TX_TYPE_CONFIG: Record<string, { title: string; subtitle: string }> = {
@@ -44,7 +44,7 @@ function formatTime(value: string) {
   return d ? d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' }) : ''
 }
 
-function groupTransactions(items: { id: string; type: string; reference_id: string; time: string; amount: number; currency: string; direction: string }[]) {
+function groupTransactions(items: Transaction[]) {
   return items.reduce<Array<{ date: string; items: typeof items }>>((groups, item) => {
     const date = formatDateGroup(item.time)
     const existing = groups.find(g => g.date === date)

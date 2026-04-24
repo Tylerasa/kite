@@ -1,7 +1,7 @@
 import { ChevronRight, Plus, RefreshCw, Send } from 'lucide-react'
 import { useEffect, useState, type ReactNode } from 'react'
 import { Icons } from '../../public/assets/svgs/icons'
-import { useBalances, useTransactions } from '../api/hooks'
+import { useBalances, useTransactions, type Transaction } from '../api/hooks'
 import { Layout, Spinner, formatAmount } from '../components/Layout'
 import {
   Carousel,
@@ -95,14 +95,7 @@ function TransactionIcon({ type }: { type: string }) {
   )
 }
 
-type ActivityItem = {
-  id: string
-  type: string
-  time: string
-  amount: number
-  currency: string
-  direction: string
-}
+type ActivityItem = Transaction
 
 function activityTitle(type: string, out: boolean) {
   if (type === 'payout') return 'Bank transfer'
