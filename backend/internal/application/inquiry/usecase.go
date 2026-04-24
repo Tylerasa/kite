@@ -42,20 +42,24 @@ func (uc *UseCase) ResolveRecipient(ctx context.Context, cmd in.InquiryCommand) 
 	if err != nil {
 		return nil, err
 	}
-	if inst == nil {
-		return nil, exceptions.ErrInvalidBankCode
-	}
 
 	accountName, err := uc.resolver.Resolve(ctx, cmd.Currency, cmd.BankCode, cmd.AccountNumber)
 	if err != nil {
 		return nil, err
 	}
 
+	bankName := cmd.BankCode
+	institutionType := "BANK_TRANSFER"
+	if inst != nil {
+		bankName = inst.Name
+		institutionType = inst.Type
+	}
+
 	return &in.InquiryResult{
 		AccountName:     accountName,
 		AccountNumber:   cmd.AccountNumber,
 		BankCode:        cmd.BankCode,
-		BankName:        inst.Name,
-		InstitutionType: inst.Type,
+		BankName:        bankName,
+		InstitutionType: institutionType,
 	}, nil
 }
