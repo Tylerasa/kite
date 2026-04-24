@@ -421,7 +421,6 @@ At true scale, read traffic overwhelms a single primary. Fix: PgBouncer for conn
 
 ---
 
-
 ## Loom walkthrough
 
 _[https://www.loom.com/share/887f06d45e4b43cfafe5e3459700585f]_
