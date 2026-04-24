@@ -235,11 +235,10 @@ All balance-mutating operations use `SELECT … FOR UPDATE` inside a Postgres tr
 ## FX rates
 
 1. `POST /conversions/quote` checks `fx_rate_cache` for a non-expired row.
-2. Cache miss → Frankfurter (`https://api.frankfurter.app/latest?from=<base>`) is called.
-3. If Frankfurter does not carry the pair (NGN, KES), the fallback is `open.er-api.com/v6/latest/<base>` (no API key required).
-4. The rate is upserted into `fx_rate_cache` with a 5-minute TTL.
-5. A sell-side spread of **0.75%** is applied: `quoted_rate = market_rate × (1 − 0.0075)`.
-6. The quote is valid for **45 seconds**. Executing an expired quote returns `400 quote_expired`.
+2. Cache miss → `open.er-api.com/v6/latest/<base>` is called (free, no API key required, covers all five currencies).
+3. The rate is upserted into `fx_rate_cache` with a 5-minute TTL.
+4. A sell-side spread of **0.75%** is applied: `quoted_rate = market_rate × (1 − 0.0075)`.
+5. The quote is valid for **45 seconds**. Executing an expired quote returns `400 quote_expired`.
 
 ---
 
@@ -378,4 +377,4 @@ At true scale, read traffic overwhelms a single primary. Fix: PgBouncer for conn
 
 ## Loom walkthrough
 
-_[Recording link — to be added before submission]_
+_[https://www.loom.com/share/887f06d45e4b43cfafe5e3459700585f]_
