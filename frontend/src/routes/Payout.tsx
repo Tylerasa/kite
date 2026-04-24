@@ -401,7 +401,7 @@ export default function Payout() {
                     label="Account number"
                     id="accountNumber"
                     value={accountNumber}
-                    onChange={v => setAccountNumber(v.replace(/\D/g, ''))}
+                    onChange={v => setAccountNumber(hasInstitutions ? v.replace(/\D/g, '') : v)}
                     placeholder="Account number"
                   />
 
