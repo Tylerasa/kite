@@ -342,6 +342,20 @@ Rate caching in the same database keeps the architecture simple. A Redis cache w
 
 Tokens are valid for 24 hours with no server-side session state. A logout endpoint would need a short-lived blocklist (Redis set keyed by `jti`) to invalidate tokens before expiry.
 
+## Scaling to 1M users — what breaks first
+
+**1. Balance reads (breaks first)**
+Balances are computed via `SUM(amount)` over `ledger_entries` on every request. With 1M users averaging hundreds of entries each, this becomes a full index scan per balance read. Fix: materialise a `balances` table updated inside the same DB transaction as every ledger write. Reads hit the materialised row; the ledger remains the source of truth for audits.
+
+**2. Postgres as a payout queue (breaks second)**
+The background job polls `payouts` with `FOR UPDATE SKIP LOCKED` every few seconds. At volume this creates lock contention and high DB CPU. Fix: publish payout jobs to SQS or NATS on creation; run stateless worker pods that consume from the queue. The payout table still records state — the queue is just the trigger.
+
+**3. FX rate cache in Postgres (next)**
+Each quote request that misses the 5-minute cache hits the external FX API and writes to Postgres. At thousands of quotes per second this adds unnecessary write load. Fix: move the cache to Redis with a TTL key; fall back to Postgres then the live API on a cold miss.
+
+**4. Single-region Postgres (last)**
+At true scale, read traffic overwhelms a single primary. Fix: PgBouncer for connection pooling + read replicas for balance reads (using the materialised balance table so stale replica lag isn't a concern). Multi-region active-passive comes later once those are saturated.
+
 ---
 
 ## Loom walkthrough
