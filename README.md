@@ -290,6 +290,49 @@ All protected endpoints require `Authorization: Bearer <token>`.
 | `POST` | `/payouts` | JWT | 202 if compliance hold |
 | `GET` | `/payouts/:id` | JWT | Poll for status |
 
+### Seed payout recipients
+
+These accounts always resolve to a known name — useful for testing the payout flow without guessing.
+
+**NGN**
+| Bank | Bank code | Account number | Name |
+|------|-----------|----------------|------|
+| Access Bank | `000014` | `0123456789` | JOHN ADEWALE DOE |
+| GTBank | `000013` | `9876543210` | IBRAHIM MUSA ALIYU |
+| Zenith Bank | `000015` | `5555555555` | FUNMI ADESOLA BELLO |
+| Kuda | `090267` | `1111111111` | TUNDE BABATUNDE SULE |
+| OPay | `100004` | `0810000001` | FATIMA BELLO GARBA |
+
+**KES**
+| Bank | Bank code | Account number | Name |
+|------|-----------|----------------|------|
+| KCB | `0001` | `1234567890` | JAMES MWANGI KARIUKI |
+| Equity Bank | `0068` | `9876543210` | GRACE WANGARI NJERI |
+| M-PESA | `SAFKEN` | `0712345678` | WANJIRU MWANGI |
+
+**USD**
+| Bank | Routing number | Account number | Name |
+|------|----------------|----------------|------|
+| JPMorgan Chase | `021000021` | `1000000001` | JAMES WILLIAM CARTER |
+| Bank of America | `026009593` | `2000000001` | MICHAEL JOHN ANDERSON |
+| Wells Fargo | `121042882` | `3000000001` | ROBERT DAVID HARRIS |
+
+**GBP**
+| Bank | Sort code | Account number | Name |
+|------|-----------|----------------|------|
+| Barclays | `200000` | `10000001` | OLIVER JAMES WRIGHT |
+| HSBC UK | `400250` | `20000001` | HARRY THOMAS WALKER |
+| Lloyds Bank | `300000` | `30000001` | GEORGE HENRY ROBERTS |
+
+**EUR**
+| Bank | BIC | IBAN | Name |
+|------|-----|------|------|
+| Deutsche Bank | `DEUTDEDB` | `DE89370400440532013000` | HANS JOACHIM MUELLER |
+| BNP Paribas | `BNPAFRPP` | `FR7630006000011234567890189` | JEAN PIERRE DUPONT |
+| ING | `INGBNL2A` | `NL91ABNA0417164300` | PIETER JAN DE VRIES |
+
+Any account number not in this list resolves with a deterministic fallback name.
+
 ### Error format
 
 ```json
