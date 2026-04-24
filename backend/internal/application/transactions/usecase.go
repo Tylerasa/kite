@@ -4,7 +4,8 @@ import (
 	"context"
 	"math"
 
-	"github.com/kite/internal/domain/models"
+	"github.com/google/uuid"
+	"github.com/kite/internal/domain/exceptions"
 	"github.com/kite/internal/domain/ports/in"
 	"github.com/kite/internal/domain/ports/out"
 )
@@ -26,19 +27,9 @@ func (uc *UseCase) GetHistory(ctx context.Context, q in.HistoryQuery) (*in.Histo
 	}
 	offset := (q.Page - 1) * q.Limit
 
-	txs, total, err := uc.txRepo.GetHistoryForUser(ctx, q.UserID, q.Limit, offset)
+	records, total, err := uc.txRepo.GetHistoryForUser(ctx, q.UserID, q.Limit, offset)
 	if err != nil {
 		return nil, err
-	}
-
-	records := make([]*models.TransactionRecord, 0, len(txs))
-	for _, tx := range txs {
-		records = append(records, &models.TransactionRecord{
-			ID:          tx.ID,
-			Type:        tx.Type,
-			ReferenceID: tx.ReferenceID,
-			CreatedAt:   tx.CreatedAt,
-		})
 	}
 
 	totalPages := int(math.Ceil(float64(total) / float64(q.Limit)))
@@ -52,4 +43,15 @@ func (uc *UseCase) GetHistory(ctx context.Context, q in.HistoryQuery) (*in.Histo
 		Page:       q.Page,
 		TotalPages: totalPages,
 	}, nil
+}
+
+func (uc *UseCase) GetByID(ctx context.Context, userID, transactionID uuid.UUID) (*in.TransactionDetail, error) {
+	tx, entries, err := uc.txRepo.GetByIDForUser(ctx, userID, transactionID)
+	if err != nil {
+		return nil, err
+	}
+	if tx == nil {
+		return nil, exceptions.ErrTransactionNotFound
+	}
+	return &in.TransactionDetail{Transaction: tx, Entries: entries}, nil
 }

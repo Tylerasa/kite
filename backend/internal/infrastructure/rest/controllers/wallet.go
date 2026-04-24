@@ -4,8 +4,11 @@ import (
 	"log/slog"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
+	"github.com/kite/internal/domain/models"
 	"github.com/kite/internal/domain/ports/in"
 	"github.com/kite/internal/infrastructure/rest/apiutil"
 	"github.com/kite/internal/infrastructure/rest/middleware"
@@ -27,6 +30,42 @@ type balanceItem struct {
 	Display  string `json:"display"` // human-readable e.g. "100.00"
 }
 
+type balancesResponse struct {
+	Balances []balanceItem `json:"balances"`
+}
+
+type transactionsResponse struct {
+	Items      any `json:"items"`
+	Total      int `json:"total"`
+	Page       int `json:"page"`
+	TotalPages int `json:"total_pages"`
+}
+
+type transactionEntryResponse struct {
+	ID          string    `json:"id"`
+	Amount      int64     `json:"amount"`
+	Direction   string    `json:"direction"`
+	Currency    string    `json:"currency"`
+	AccountType string    `json:"account_type"`
+	CreatedAt   time.Time `json:"created_at"`
+}
+
+type transactionDetailResponse struct {
+	ID          string                     `json:"id"`
+	Type        string                     `json:"type"`
+	ReferenceID string                     `json:"reference_id"`
+	CreatedAt   time.Time                  `json:"created_at"`
+	Entries     []transactionEntryResponse `json:"entries"`
+}
+
+// GetBalances godoc
+// @Summary      List wallet balances for all currencies
+// @Tags         wallet
+// @Produce      json
+// @Security     BearerAuth
+// @Success      200  {object}  balancesResponse
+// @Failure      401  {object}  apiutil.ErrorResponse
+// @Router       /wallets/balances [get]
 func (ctrl *WalletController) GetBalances(c *gin.Context) {
 	userID := middleware.GetUserID(c)
 
@@ -48,6 +87,16 @@ func (ctrl *WalletController) GetBalances(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"balances": items})
 }
 
+// GetTransactions godoc
+// @Summary      Paginated transaction history
+// @Tags         wallet
+// @Produce      json
+// @Security     BearerAuth
+// @Param        page   query     int  false  "Page number (default 1)"
+// @Param        limit  query     int  false  "Items per page (default 20, max 100)"
+// @Success      200    {object}  transactionsResponse
+// @Failure      401    {object}  apiutil.ErrorResponse
+// @Router       /wallets/transactions [get]
 func (ctrl *WalletController) GetTransactions(c *gin.Context) {
 	userID := middleware.GetUserID(c)
 
@@ -76,6 +125,56 @@ func (ctrl *WalletController) GetTransactions(c *gin.Context) {
 		"page":        result.Page,
 		"total_pages": result.TotalPages,
 	})
+}
+
+// GetTransaction godoc
+// @Summary      Get a transaction with ledger entries
+// @Tags         wallet
+// @Produce      json
+// @Security     BearerAuth
+// @Param        id   path      string  true  "Transaction UUID"
+// @Success      200  {object}  transactionDetailResponse
+// @Failure      400  {object}  apiutil.ErrorResponse
+// @Failure      401  {object}  apiutil.ErrorResponse
+// @Failure      404  {object}  apiutil.ErrorResponse
+// @Router       /wallets/transactions/{id} [get]
+func (ctrl *WalletController) GetTransaction(c *gin.Context) {
+	transactionID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, apiutil.ErrorResponse{Error: apiutil.ErrorBody{
+			Code: "invalid_transaction_id", Message: "transaction ID must be a valid UUID.",
+		}})
+		return
+	}
+
+	detail, err := ctrl.txUC.GetByID(c.Request.Context(), middleware.GetUserID(c), transactionID)
+	if err != nil {
+		apiutil.RespondError(c, ctrl.logger, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, toTransactionDetailResponse(detail.Transaction, detail.Entries))
+}
+
+func toTransactionDetailResponse(tx *models.LedgerTransaction, entries []*models.LedgerEntryWithAccount) transactionDetailResponse {
+	resp := transactionDetailResponse{
+		ID:          tx.ID.String(),
+		Type:        string(tx.Type),
+		ReferenceID: tx.ReferenceID.String(),
+		CreatedAt:   tx.CreatedAt,
+		Entries:     make([]transactionEntryResponse, 0, len(entries)),
+	}
+	for _, entry := range entries {
+		resp.Entries = append(resp.Entries, transactionEntryResponse{
+			ID:          entry.ID.String(),
+			Amount:      entry.Amount,
+			Direction:   string(entry.Direction),
+			Currency:    string(entry.Currency),
+			AccountType: string(entry.AccountType),
+			CreatedAt:   entry.CreatedAt,
+		})
+	}
+	return resp
 }
 
 // formatMinorUnits formats an int64 minor unit amount as a decimal string.
