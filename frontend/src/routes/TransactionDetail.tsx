@@ -58,7 +58,6 @@ export default function TransactionDetail() {
   const secondaryEntry = creditEntry && creditEntry.id !== primaryEntry?.id ? creditEntry : entries.find((entry) => entry.id !== primaryEntry?.id)
   const isCredit = primaryEntry?.direction === 'credit'
   const title = data ? titleFor(data.type, isCredit) : ''
-  const subtitle = data ? subtitleFor(data.type, isCredit) : ''
   const transferTime = data ? formatDateTime(data.created_at) : ''
   const canRepeatTransfer = data?.type === 'payout'
 
@@ -71,6 +70,10 @@ export default function TransactionDetail() {
   const payoutFailed = payoutStatus === 'failed'
   const payoutInProgress = payoutStatus === 'pending' || payoutStatus === 'processing'
   const payoutUnderReview = payoutStatus === 'review'
+
+  const subtitle = data
+    ? payoutUnderReview ? 'Under review' : payoutFailed ? 'Failed' : subtitleFor(data.type, isCredit)
+    : ''
 
   return (
     <Layout>
