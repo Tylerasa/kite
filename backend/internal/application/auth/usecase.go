@@ -2,12 +2,14 @@ package auth
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/kite/internal/domain/exceptions"
 	"github.com/kite/internal/domain/models"
 	"github.com/kite/internal/domain/ports/in"
@@ -15,7 +17,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-const bcryptCost = 12
+const BCRYPTCOST = 12
 
 type UseCase struct {
 	users      out.UserRepository
@@ -34,31 +36,45 @@ func NewUseCase(users out.UserRepository, accounts out.AccountRepository, jwtSec
 func (uc *UseCase) Signup(ctx context.Context, cmd in.SignupCommand) (*in.TokenResult, error) {
 	email := strings.ToLower(strings.TrimSpace(cmd.Email))
 	if email == "" || !strings.Contains(email, "@") {
-		return nil, exceptions.ErrInvalidCredentials.WithDetails(map[string]interface{}{
+		return nil, exceptions.ErrInvalidCredentials.WithDetails(map[string]any{
 			"field": "email", "reason": "invalid email format",
 		})
 	}
 	if len(cmd.Password) < 8 {
-		return nil, exceptions.ErrInvalidCredentials.WithDetails(map[string]interface{}{
+		return nil, exceptions.ErrInvalidCredentials.WithDetails(map[string]any{
 			"field": "password", "reason": "must be at least 8 characters",
 		})
 	}
+	if len(cmd.Pin) < 4 || len(cmd.Pin) > 6 {
+		return nil, exceptions.ErrInvalidCredentials.WithDetails(map[string]any{
+			"field": "pin", "reason": "must be 4–6 digits",
+		})
+	}
 
-	hash, err := bcrypt.GenerateFromPassword([]byte(cmd.Password), bcryptCost)
+	hash, err := bcrypt.GenerateFromPassword([]byte(cmd.Password), BCRYPTCOST)
 	if err != nil {
 		return nil, fmt.Errorf("hash password: %w", err)
+	}
+	pinHash, err := bcrypt.GenerateFromPassword([]byte(cmd.Pin), BCRYPTCOST)
+	if err != nil {
+		return nil, fmt.Errorf("hash pin: %w", err)
 	}
 
 	user := &models.User{
 		ID:           uuid.New(),
+		Name:         strings.TrimSpace(cmd.Name),
 		Email:        email,
 		PasswordHash: string(hash),
+		PinHash:      string(pinHash),
 		CreatedAt:    time.Now().UTC(),
 	}
 
 	if err := uc.users.Create(ctx, user); err != nil {
-		// Treat unique violation as user already exists
-		return nil, exceptions.ErrUserAlreadyExists
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
+			return nil, exceptions.ErrUserAlreadyExists
+		}
+		return nil, fmt.Errorf("create user: %w", err)
 	}
 
 	// Create all 5 currency wallet accounts at signup — never lazily.
@@ -82,7 +98,7 @@ func (uc *UseCase) Signup(ctx context.Context, cmd in.SignupCommand) (*in.TokenR
 		return nil, err
 	}
 
-	return &in.TokenResult{Token: token, UserID: user.ID}, nil
+	return &in.TokenResult{Token: token, UserID: user.ID, Name: user.Name}, nil
 }
 
 func (uc *UseCase) Login(ctx context.Context, cmd in.LoginCommand) (*in.TokenResult, error) {
@@ -102,7 +118,11 @@ func (uc *UseCase) Login(ctx context.Context, cmd in.LoginCommand) (*in.TokenRes
 		return nil, err
 	}
 
-	return &in.TokenResult{Token: token, UserID: user.ID}, nil
+	return &in.TokenResult{Token: token, UserID: user.ID, Name: user.Name}, nil
+}
+
+func (uc *UseCase) VerifyPin(ctx context.Context, userID uuid.UUID, pin string) error {
+	return uc.users.VerifyPin(ctx, userID, pin)
 }
 
 func (uc *UseCase) generateToken(userID uuid.UUID) (string, error) {

@@ -13,16 +13,18 @@ import (
 
 type DepositController struct {
 	uc     in.DepositUseCase
+	auth   in.AuthUseCase
 	logger *slog.Logger
 }
 
-func NewDepositController(uc in.DepositUseCase, logger *slog.Logger) *DepositController {
-	return &DepositController{uc: uc, logger: logger}
+func NewDepositController(uc in.DepositUseCase, auth in.AuthUseCase, logger *slog.Logger) *DepositController {
+	return &DepositController{uc: uc, auth: auth, logger: logger}
 }
 
 type depositRequest struct {
-	Currency string `json:"currency" binding:"required"`
+	Currency string `json:"currency" binding:"required,len=3"`
 	Amount   int64  `json:"amount" binding:"required,min=1"`
+	Pin      string `json:"pin" binding:"required,min=4,max=6"`
 }
 
 type depositResponse struct {
@@ -34,6 +36,21 @@ type depositResponse struct {
 	CreatedAt      string `json:"created_at"`
 }
 
+// Create godoc
+// @Summary      Simulate a deposit into a currency wallet
+// @Description  Idempotent — repeated calls with the same Idempotency-Key return the original deposit (HTTP 200) without moving money twice.
+// @Tags         deposits
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Param        Idempotency-Key  header    string          true  "Unique key per deposit attempt (e.g. crypto.randomUUID())"
+// @Param        body             body      depositRequest  true  "Deposit details"
+// @Success      201              {object}  depositResponse        "New deposit created"
+// @Success      200              {object}  depositResponse        "Duplicate — existing deposit returned"
+// @Failure      400              {object}  apiutil.ErrorResponse
+// @Failure      401              {object}  apiutil.ErrorResponse
+// @Failure      422              {object}  apiutil.ErrorResponse  "invalid currency"
+// @Router       /deposits [post]
 func (ctrl *DepositController) Create(c *gin.Context) {
 	idempotencyKey := c.GetHeader("Idempotency-Key")
 	if idempotencyKey == "" {
@@ -47,12 +64,19 @@ func (ctrl *DepositController) Create(c *gin.Context) {
 	var req depositRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, apiutil.ErrorResponse{Error: apiutil.ErrorBody{
-			Code: "validation_error", Message: err.Error(),
+			Code: "validation_error", Message: apiutil.BindingError(err),
 		}})
 		return
 	}
 
 	userID := middleware.GetUserID(c)
+
+	if err := ctrl.auth.VerifyPin(c.Request.Context(), userID, req.Pin); err != nil {
+		c.JSON(http.StatusForbidden, apiutil.ErrorResponse{Error: apiutil.ErrorBody{
+			Code: "invalid_pin", Message: "Incorrect PIN.",
+		}})
+		return
+	}
 
 	result, err := ctrl.uc.Deposit(c.Request.Context(), in.DepositCommand{
 		UserID:         userID,

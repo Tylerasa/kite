@@ -10,8 +10,10 @@ import (
 // --- Auth ---
 
 type SignupCommand struct {
+	Name     string
 	Email    string
 	Password string
+	Pin      string
 }
 
 type LoginCommand struct {
@@ -22,11 +24,13 @@ type LoginCommand struct {
 type TokenResult struct {
 	Token  string
 	UserID uuid.UUID
+	Name   string
 }
 
 type AuthUseCase interface {
 	Signup(ctx context.Context, cmd SignupCommand) (*TokenResult, error)
 	Login(ctx context.Context, cmd LoginCommand) (*TokenResult, error)
+	VerifyPin(ctx context.Context, userID uuid.UUID, pin string) error
 }
 
 // --- Wallet ---
@@ -45,8 +49,8 @@ type DepositCommand struct {
 }
 
 type DepositResult struct {
-	Deposit   *models.Deposit
-	IsNew     bool
+	Deposit *models.Deposit
+	IsNew   bool
 }
 
 type DepositUseCase interface {
@@ -83,23 +87,50 @@ type ConversionUseCase interface {
 // --- Payouts ---
 
 type PayoutCommand struct {
-	UserID                uuid.UUID
-	SourceCurrency        models.Currency
-	Amount                int64
+	UserID                 uuid.UUID
+	SourceCurrency         models.Currency
+	Amount                 int64
 	RecipientAccountNumber string
-	RecipientBankCode     string
-	RecipientAccountName  string
+	RecipientBankCode      string
+	RecipientAccountName   string
 }
 
 type PayoutResult struct {
 	Payout *models.Payout
 }
 
+type PayoutDetail struct {
+	Payout *models.Payout
+	Ledger []*models.PayoutLedgerTransaction
+}
+
 type PayoutUseCase interface {
 	InitiatePayout(ctx context.Context, cmd PayoutCommand) (*PayoutResult, error)
-	GetPayout(ctx context.Context, userID, payoutID uuid.UUID) (*models.Payout, error)
+	GetPayout(ctx context.Context, userID, payoutID uuid.UUID) (*PayoutDetail, error)
 	ProcessPayout(ctx context.Context, payoutID uuid.UUID) error
 	ReversePayout(ctx context.Context, payoutID uuid.UUID) error
+}
+
+// --- Institutions & Recipient Inquiry ---
+
+type InquiryCommand struct {
+	UserID        uuid.UUID
+	Currency      models.Currency
+	BankCode      string
+	AccountNumber string
+}
+
+type InquiryResult struct {
+	AccountName     string
+	AccountNumber   string
+	BankCode        string
+	BankName        string
+	InstitutionType string
+}
+
+type InstitutionUseCase interface {
+	ListInstitutions(ctx context.Context, currency models.Currency) ([]*models.Institution, error)
+	ResolveRecipient(ctx context.Context, cmd InquiryCommand) (*InquiryResult, error)
 }
 
 // --- Transactions ---
@@ -117,6 +148,12 @@ type HistoryResult struct {
 	TotalPages int
 }
 
+type TransactionDetail struct {
+	Transaction *models.LedgerTransaction
+	Entries     []*models.LedgerEntryWithAccount
+}
+
 type TransactionUseCase interface {
 	GetHistory(ctx context.Context, q HistoryQuery) (*HistoryResult, error)
+	GetByID(ctx context.Context, userID, transactionID uuid.UUID) (*TransactionDetail, error)
 }

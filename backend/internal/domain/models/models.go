@@ -71,8 +71,10 @@ const (
 
 type User struct {
 	ID           uuid.UUID
+	Name         string
 	Email        string
 	PasswordHash string
+	PinHash      string
 	CreatedAt    time.Time
 }
 
@@ -180,6 +182,26 @@ type Payout struct {
 	UpdatedAt             time.Time
 }
 
+// LedgerEntryWithAccount enriches a ledger entry with the account type so
+// API consumers can understand where money moved without knowing account UUIDs.
+type LedgerEntryWithAccount struct {
+	ID          uuid.UUID
+	Amount      int64
+	Direction   Direction
+	Currency    Currency
+	AccountType AccountType
+	CreatedAt   time.Time
+}
+
+// PayoutLedgerTransaction is a ledger transaction with its entries,
+// used to show the full money trail on a payout detail response.
+type PayoutLedgerTransaction struct {
+	ID        uuid.UUID
+	Type      TransactionType
+	CreatedAt time.Time
+	Entries   []*LedgerEntryWithAccount
+}
+
 // BalanceEntry is a computed balance per currency for a user.
 type BalanceEntry struct {
 	Currency Currency
@@ -188,16 +210,16 @@ type BalanceEntry struct {
 
 // TransactionRecord is the unified history feed item.
 type TransactionRecord struct {
-	ID          uuid.UUID
-	Type        TransactionType
-	ReferenceID uuid.UUID
-	Currency    Currency
-	Amount      int64
-	Direction   Direction
-	Status      string
-	CreatedAt   time.Time
+	ID          uuid.UUID `json:"id"`
+	Type        TransactionType `json:"type"`
+	ReferenceID uuid.UUID `json:"reference_id"`
+	Currency    Currency `json:"currency"`
+	Amount      int64 `json:"amount"`
+	Direction   Direction `json:"direction"`
+	Status      string `json:"status"`
+	CreatedAt   time.Time `json:"time"`
 	// Type-specific details populated by the use case
-	Details interface{}
+	Details any  `json:"details"`
 }
 
 type DepositDetails struct {
@@ -214,11 +236,34 @@ type ConversionDetails struct {
 }
 
 type PayoutDetails struct {
-	RecipientAccountName  string
+	RecipientAccountName   string
 	RecipientAccountNumber string
-	RecipientBankCode     string
-	SourceCurrency        Currency
-	Amount                int64
-	Status                PayoutStatus
-	ComplianceFlagged     bool
+	RecipientBankCode      string
+	SourceCurrency         Currency
+	Amount                 int64
+	Status                 PayoutStatus
+	ComplianceFlagged      bool
+}
+
+// Institution represents a bank or mobile money provider available for payouts.
+type Institution struct {
+	Type     string   // "BANK_TRANSFER" or "MOBILE_MONEY"
+	BankCode string
+	Name     string
+	Currency Currency
+	Logo     string // optional, used for mobile money providers
+}
+
+// AuditLog records every financial operation attempt and its outcome.
+// Follows Cinnamon's deferred logging pattern: Create on entry, Update on exit.
+type AuditLog struct {
+	ID          uuid.UUID
+	UserID      uuid.UUID
+	Operation   string  // "deposit", "conversion_quote", "conversion_execute", "payout"
+	ReferenceID *uuid.UUID
+	Status      string  // "pending", "success", "failure"
+	ErrorCode   *string
+	RequestID   string
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
 }

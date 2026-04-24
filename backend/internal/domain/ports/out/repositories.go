@@ -12,6 +12,7 @@ type UserRepository interface {
 	Create(ctx context.Context, user *models.User) error
 	GetByEmail(ctx context.Context, email string) (*models.User, error)
 	GetByID(ctx context.Context, id uuid.UUID) (*models.User, error)
+	VerifyPin(ctx context.Context, userID uuid.UUID, pin string) error
 }
 
 // AccountRepository manages the chart of accounts.
@@ -28,8 +29,16 @@ type LedgerRepository interface {
 	CreateTransaction(ctx context.Context, tx *models.LedgerTransaction) error
 	CreateEntries(ctx context.Context, entries []*models.LedgerEntry) error
 	GetBalanceForAccount(ctx context.Context, accountID uuid.UUID) (int64, error)
+	// CheckAndWrite atomically verifies the account has sufficient balance using
+	// SELECT FOR UPDATE (or a mutex in tests), then writes the ledger transaction
+	// and all entries in the same atomic operation.
+	// Returns ErrInsufficientFunds if balance < requiredAmount.
+	CheckAndWrite(ctx context.Context, accountID uuid.UUID, requiredAmount int64, ledgerTx *models.LedgerTransaction, entries []*models.LedgerEntry) error
 	// GetEntriesForUser returns paginated entries across all user accounts, newest first.
 	GetEntriesForUser(ctx context.Context, userID uuid.UUID, limit, offset int) ([]*models.LedgerEntry, int, error)
+	// GetByReference returns all ledger transactions and their entries for a given
+	// business record (deposit/conversion/payout) identified by reference_id.
+	GetByReference(ctx context.Context, referenceID uuid.UUID) ([]*models.PayoutLedgerTransaction, error)
 }
 
 // DepositRepository manages deposit records.
@@ -62,7 +71,9 @@ type ConversionRepository interface {
 
 // PayoutRepository manages payout lifecycle.
 type PayoutRepository interface {
-	Create(ctx context.Context, p *models.Payout) error
+	// CreateWithHold atomically inserts the payout record, its ledger transaction,
+	// and ledger entries in a single DB transaction — prevents orphan transactions.
+	CreateWithHold(ctx context.Context, p *models.Payout, ledgerTx *models.LedgerTransaction, entries []*models.LedgerEntry) error
 	GetByID(ctx context.Context, id uuid.UUID) (*models.Payout, error)
 	// ClaimPending atomically transitions one pending payout to processing.
 	// Returns nil if none available.
@@ -74,5 +85,23 @@ type PayoutRepository interface {
 
 // TransactionRepository provides the unified history feed.
 type TransactionRepository interface {
-	GetHistoryForUser(ctx context.Context, userID uuid.UUID, limit, offset int) ([]*models.LedgerTransaction, int, error)
+	GetHistoryForUser(ctx context.Context, userID uuid.UUID, limit, offset int) ([]*models.TransactionRecord, int, error)
+	GetByIDForUser(ctx context.Context, userID, transactionID uuid.UUID) (*models.LedgerTransaction, []*models.LedgerEntryWithAccount, error)
+}
+
+// AuditLogRepository records financial operation attempts and outcomes.
+type AuditLogRepository interface {
+	Create(ctx context.Context, entry *models.AuditLog) error
+	Update(ctx context.Context, id uuid.UUID, status string, errorCode *string) error
+}
+
+// InstitutionStore is an in-memory read-only registry of banks and mobile money providers.
+type InstitutionStore interface {
+	ListByCurrency(currency models.Currency) ([]*models.Institution, error)
+	GetByCode(currency models.Currency, bankCode string) (*models.Institution, error)
+}
+
+// RecipientInquiryProvider simulates a name-enquiry call to a payment network.
+type RecipientInquiryProvider interface {
+	Resolve(ctx context.Context, currency models.Currency, bankCode, accountNumber string) (string, error)
 }

@@ -56,6 +56,10 @@ func (r *UserRepo) GetByID(_ context.Context, id uuid.UUID) (*models.User, error
 	return u, nil
 }
 
+func (r *UserRepo) VerifyPin(_ context.Context, _ uuid.UUID, _ string) error {
+	return nil // PIN not enforced in unit tests
+}
+
 // --- AccountRepo ---
 
 type AccountRepo struct {
@@ -187,15 +191,50 @@ func (r *LedgerRepo) GetEntriesForUser(_ context.Context, userID uuid.UUID, limi
 	return r.entries, len(r.entries), nil
 }
 
-// CheckAndWriteEntries atomically checks balance and writes entries (simulates FOR UPDATE).
-// Returns ErrInsufficientFunds if accountID balance < requiredAmount.
-func (r *LedgerRepo) CheckAndWriteEntries(ctx context.Context, accountID uuid.UUID, requiredAmount int64, entries []*models.LedgerEntry) error {
+func (r *LedgerRepo) GetByReference(_ context.Context, referenceID uuid.UUID) ([]*models.PayoutLedgerTransaction, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	balance := r.balanceLocked(accountID)
-	if balance < requiredAmount {
+
+	txMap := map[uuid.UUID]*models.PayoutLedgerTransaction{}
+	var order []uuid.UUID
+	for _, tx := range r.transactions {
+		if tx.ReferenceID == referenceID {
+			txMap[tx.ID] = &models.PayoutLedgerTransaction{
+				ID:        tx.ID,
+				Type:      tx.Type,
+				CreatedAt: tx.CreatedAt,
+			}
+			order = append(order, tx.ID)
+		}
+	}
+	for _, e := range r.entries {
+		if t, ok := txMap[e.TransactionID]; ok {
+			t.Entries = append(t.Entries, &models.LedgerEntryWithAccount{
+				ID:        e.ID,
+				Amount:    e.Amount,
+				Direction: e.Direction,
+				Currency:  e.Currency,
+				CreatedAt: e.CreatedAt,
+			})
+		}
+	}
+	result := make([]*models.PayoutLedgerTransaction, 0, len(order))
+	for _, id := range order {
+		result = append(result, txMap[id])
+	}
+	return result, nil
+}
+
+// CheckAndWrite simulates SELECT FOR UPDATE with a mutex: atomically checks the
+// balance and — if sufficient — writes the ledger transaction and entries.
+// Returns ErrInsufficientFunds if balance < requiredAmount.
+func (r *LedgerRepo) CheckAndWrite(_ context.Context, accountID uuid.UUID, requiredAmount int64, ledgerTx *models.LedgerTransaction, entries []*models.LedgerEntry) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if r.balanceLocked(accountID) < requiredAmount {
 		return exceptions.ErrInsufficientFunds
 	}
+	r.transactions[ledgerTx.ID] = ledgerTx
 	r.entries = append(r.entries, entries...)
 	return nil
 }
@@ -341,16 +380,27 @@ func (r *ConversionRepo) GetByID(_ context.Context, id uuid.UUID) (*models.Conve
 type PayoutRepo struct {
 	mu      sync.Mutex
 	payouts map[uuid.UUID]*models.Payout
+	ledger  *LedgerRepo
 }
 
 func NewPayoutRepo() *PayoutRepo {
 	return &PayoutRepo{payouts: make(map[uuid.UUID]*models.Payout)}
 }
 
-func (r *PayoutRepo) Create(_ context.Context, p *models.Payout) error {
+// NewPayoutRepoWithLedger returns a fake that also writes hold entries through
+// the provided fake ledger repo, mirroring what the real DB transaction does.
+func NewPayoutRepoWithLedger(ledger *LedgerRepo) *PayoutRepo {
+	return &PayoutRepo{payouts: make(map[uuid.UUID]*models.Payout), ledger: ledger}
+}
+
+func (r *PayoutRepo) CreateWithHold(ctx context.Context, p *models.Payout, ledgerTx *models.LedgerTransaction, entries []*models.LedgerEntry) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	r.payouts[p.ID] = p
+	if r.ledger != nil {
+		_ = r.ledger.CreateTransaction(ctx, ledgerTx)
+		_ = r.ledger.CreateEntries(ctx, entries)
+	}
 	return nil
 }
 
@@ -437,6 +487,22 @@ type TransactionRepo struct{}
 
 func NewTransactionRepo() *TransactionRepo { return &TransactionRepo{} }
 
-func (r *TransactionRepo) GetHistoryForUser(_ context.Context, userID uuid.UUID, limit, offset int) ([]*models.LedgerTransaction, int, error) {
+func (r *TransactionRepo) GetHistoryForUser(_ context.Context, userID uuid.UUID, limit, offset int) ([]*models.TransactionRecord, int, error) {
 	return nil, 0, nil
+}
+
+func (r *TransactionRepo) GetByIDForUser(_ context.Context, userID, transactionID uuid.UUID) (*models.LedgerTransaction, []*models.LedgerEntryWithAccount, error) {
+	return nil, nil, nil
+}
+
+// --- AuditLogRepo ---
+
+type AuditLogRepo struct{}
+
+func NewAuditLogRepo() *AuditLogRepo { return &AuditLogRepo{} }
+
+func (r *AuditLogRepo) Create(_ context.Context, _ *models.AuditLog) error { return nil }
+
+func (r *AuditLogRepo) Update(_ context.Context, _ uuid.UUID, _ string, _ *string) error {
+	return nil
 }

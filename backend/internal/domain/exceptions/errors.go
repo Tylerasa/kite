@@ -68,6 +68,10 @@ var (
 		Code:    "payout_not_found",
 		Message: "Payout not found.",
 	}
+	ErrTransactionNotFound = &DomainError{
+		Code:    "transaction_not_found",
+		Message: "Transaction not found.",
+	}
 	ErrComplianceHold = &DomainError{
 		Code:    "compliance_hold",
 		Message: "This payout has been flagged for compliance review.",
@@ -75,5 +79,13 @@ var (
 	ErrInternal = &DomainError{
 		Code:    "internal_error",
 		Message: "An unexpected error occurred.",
+	}
+	ErrDuplicateTransaction = &DomainError{
+		Code:    "duplicate_transaction",
+		Message: "An identical transaction was submitted recently. Please wait before retrying.",
+	}
+	ErrInvalidBankCode = &DomainError{
+		Code:    "invalid_bank_code",
+		Message: "The bank code is not recognised for the specified currency.",
 	}
 )

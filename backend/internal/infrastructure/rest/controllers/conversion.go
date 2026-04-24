@@ -15,16 +15,17 @@ import (
 
 type ConversionController struct {
 	uc     in.ConversionUseCase
+	auth   in.AuthUseCase
 	logger *slog.Logger
 }
 
-func NewConversionController(uc in.ConversionUseCase, logger *slog.Logger) *ConversionController {
-	return &ConversionController{uc: uc, logger: logger}
+func NewConversionController(uc in.ConversionUseCase, auth in.AuthUseCase, logger *slog.Logger) *ConversionController {
+	return &ConversionController{uc: uc, auth: auth, logger: logger}
 }
 
 type quoteRequest struct {
-	FromCurrency string `json:"from_currency" binding:"required"`
-	ToCurrency   string `json:"to_currency" binding:"required"`
+	FromCurrency string `json:"from_currency" binding:"required,len=3"`
+	ToCurrency   string `json:"to_currency" binding:"required,len=3"`
 	AmountIn     int64  `json:"amount_in" binding:"required,min=1"`
 }
 
@@ -43,6 +44,7 @@ type quoteResponse struct {
 
 type executeRequest struct {
 	QuoteID string `json:"quote_id" binding:"required"`
+	Pin     string `json:"pin" binding:"required,min=4,max=6"`
 }
 
 type conversionResponse struct {
@@ -57,11 +59,23 @@ type conversionResponse struct {
 	CreatedAt    time.Time `json:"created_at"`
 }
 
+// CreateQuote godoc
+// @Summary      Request an FX conversion quote
+// @Description  Returns a locked rate valid for 45 seconds. Pass the quote ID to /conversions/execute to settle.
+// @Tags         conversions
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Param        body  body      quoteRequest  true  "Conversion parameters"
+// @Success      200   {object}  quoteResponse
+// @Failure      400   {object}  apiutil.ErrorResponse  "invalid currency"
+// @Failure      401   {object}  apiutil.ErrorResponse
+// @Router       /conversions/quote [post]
 func (ctrl *ConversionController) CreateQuote(c *gin.Context) {
 	var req quoteRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, apiutil.ErrorResponse{Error: apiutil.ErrorBody{
-			Code: "validation_error", Message: err.Error(),
+			Code: "validation_error", Message: apiutil.BindingError(err),
 		}})
 		return
 	}
@@ -99,11 +113,25 @@ func (ctrl *ConversionController) CreateQuote(c *gin.Context) {
 	})
 }
 
+// Execute godoc
+// @Summary      Execute a previously obtained FX quote
+// @Description  Atomically debits the source wallet and credits the target wallet. A quote can only be executed once.
+// @Tags         conversions
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Param        body  body      executeRequest    true  "Quote to execute"
+// @Success      200   {object}  conversionResponse
+// @Failure      400   {object}  apiutil.ErrorResponse  "quote_expired or invalid_quote_id"
+// @Failure      401   {object}  apiutil.ErrorResponse
+// @Failure      409   {object}  apiutil.ErrorResponse  "quote_already_executed"
+// @Failure      422   {object}  apiutil.ErrorResponse  "insufficient_funds"
+// @Router       /conversions/execute [post]
 func (ctrl *ConversionController) Execute(c *gin.Context) {
 	var req executeRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, apiutil.ErrorResponse{Error: apiutil.ErrorBody{
-			Code: "validation_error", Message: err.Error(),
+			Code: "validation_error", Message: apiutil.BindingError(err),
 		}})
 		return
 	}
@@ -118,6 +146,13 @@ func (ctrl *ConversionController) Execute(c *gin.Context) {
 	}
 
 	userID := middleware.GetUserID(c)
+
+	if err := ctrl.auth.VerifyPin(c.Request.Context(), userID, req.Pin); err != nil {
+		c.JSON(http.StatusForbidden, apiutil.ErrorResponse{Error: apiutil.ErrorBody{
+			Code: "invalid_pin", Message: "Incorrect PIN.",
+		}})
+		return
+	}
 
 	result, err := ctrl.uc.ExecuteConversion(c.Request.Context(), in.ExecuteCommand{
 		UserID:  userID,
