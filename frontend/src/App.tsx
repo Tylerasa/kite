@@ -31,9 +31,11 @@ function getPage() {
 
   // 404 fallback
   return (
-    <div style={{ textAlign: 'center', padding: 80 }}>
-      <h2>Page not found</h2>
-      <a href="/dashboard" style={{ color: '#1a1a2e' }}>Go to dashboard →</a>
+    <div className="min-h-screen bg-white flex flex-col items-center justify-center font-sans text-[#1b1b1b]">
+      <h2 className="text-2xl font-bold mb-3">Page not found</h2>
+      <a href="/dashboard" className="text-sm font-medium text-[#1b1b1b] underline underline-offset-2">
+        Go to dashboard →
+      </a>
     </div>
   )
 }
