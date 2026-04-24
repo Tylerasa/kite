@@ -294,7 +294,7 @@ export default function Dashboard() {
                                 {activityTitle(tx.type, out)}
                               </p>
                               <p className="mt-0.5 text-[13px] text-[#6b7c65]">
-                                {activitySubtitle(tx.type, out)}{time ? ` · ${time}` : ''}
+                                {tx.status === 'review' ? 'Under review' : tx.status === 'failed' ? 'Failed' : activitySubtitle(tx.type, out)}{time ? ` · ${time}` : ''}
                               </p>
                             </div>
 

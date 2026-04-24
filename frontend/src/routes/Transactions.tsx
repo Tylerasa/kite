@@ -102,7 +102,7 @@ export default function Transactions() {
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-[15px] font-semibold text-[#111923]">{tc.title}</p>
                         <p className="mt-0.5 text-[13px] text-[#6b7c65]">
-                          {tc.subtitle}{formatTime(tx.time) ? ` · ${formatTime(tx.time)}` : ''}
+                          {tx.status === 'review' ? 'Under review' : tx.status === 'failed' ? 'Failed' : tc.subtitle}{formatTime(tx.time) ? ` · ${formatTime(tx.time)}` : ''}
                         </p>
                       </div>
 
