@@ -22,7 +22,7 @@ func setup() (*deposits.UseCase, *fakes.AccountRepo, *fakes.LedgerRepo) {
 	accountRepo.SeedSystemAccount(models.AccountTypeSystemCash, models.USD)
 	accountRepo.SeedSystemAccount(models.AccountTypeSystemCash, models.NGN)
 
-	uc := deposits.NewUseCase(depositRepo, accountRepo, ledgerRepo)
+	uc := deposits.NewUseCase(depositRepo, accountRepo, ledgerRepo, fakes.NewAuditLogRepo())
 	return uc, accountRepo, ledgerRepo
 }
 

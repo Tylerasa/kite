@@ -35,9 +35,8 @@ func buildUseCase() (*conversions.UseCase, *fakes.AccountRepo, *fakes.LedgerRepo
 
 	uc := conversions.NewUseCase(
 		quoteRepo, convRepo, accountRepo, ledgerRepo,
-		fxProvider, cacheRepo,
-		0.0075,          // 0.75% spread
-		5*time.Minute,
+		fxProvider, cacheRepo, fakes.NewAuditLogRepo(),
+		conversions.Config{SpreadPct: 0.0075, CacheTTL: 5 * time.Minute},
 	)
 	return uc, accountRepo, ledgerRepo, quoteRepo
 }

@@ -3,6 +3,7 @@ package deposits
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"time"
 
 	"github.com/google/uuid"
@@ -10,19 +11,41 @@ import (
 	"github.com/kite/internal/domain/models"
 	"github.com/kite/internal/domain/ports/in"
 	"github.com/kite/internal/domain/ports/out"
+	"github.com/kite/internal/domain/services"
 )
 
 type UseCase struct {
 	deposits out.DepositRepository
 	accounts out.AccountRepository
 	ledger   out.LedgerRepository
+	audit    out.AuditLogRepository
 }
 
-func NewUseCase(deposits out.DepositRepository, accounts out.AccountRepository, ledger out.LedgerRepository) *UseCase {
-	return &UseCase{deposits: deposits, accounts: accounts, ledger: ledger}
+func NewUseCase(deposits out.DepositRepository, accounts out.AccountRepository, ledger out.LedgerRepository, audit out.AuditLogRepository) *UseCase {
+	return &UseCase{deposits: deposits, accounts: accounts, ledger: ledger, audit: audit}
 }
 
-func (uc *UseCase) Deposit(ctx context.Context, cmd in.DepositCommand) (*in.DepositResult, error) {
+func (uc *UseCase) Deposit(ctx context.Context, cmd in.DepositCommand) (result *in.DepositResult, err error) {
+	logID := uuid.New()
+	auditNow := time.Now().UTC()
+	_ = uc.audit.Create(ctx, &models.AuditLog{
+		ID: logID, UserID: cmd.UserID, Operation: "deposit",
+		Status: "pending", RequestID: services.RequestIDFromCtx(ctx),
+		CreatedAt: auditNow, UpdatedAt: auditNow,
+	})
+	defer func() {
+		status, errCode := "success", (*string)(nil)
+		if err != nil {
+			status = "failure"
+			if de, ok := err.(*exceptions.DomainError); ok {
+				errCode = &de.Code
+			}
+		}
+		if auditErr := uc.audit.Update(ctx, logID, status, errCode); auditErr != nil {
+			slog.Error("audit update failed", "op", "deposit", "error", auditErr)
+		}
+	}()
+
 	if !cmd.Currency.Valid() {
 		return nil, exceptions.ErrInvalidCurrency
 	}

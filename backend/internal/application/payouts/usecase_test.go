@@ -9,12 +9,13 @@ import (
 	"github.com/kite/internal/domain/models"
 	"github.com/kite/internal/domain/ports/in"
 	"github.com/kite/internal/domain/ports/out/fakes"
+	"github.com/kite/internal/domain/services"
 )
 
 func buildUseCase(complianceThreshold int64) (*payouts.UseCase, *fakes.AccountRepo, *fakes.LedgerRepo, *fakes.PayoutRepo) {
 	accountRepo := fakes.NewAccountRepo()
 	ledgerRepo := fakes.NewLedgerRepo()
-	payoutRepo := fakes.NewPayoutRepo()
+	payoutRepo := fakes.NewPayoutRepoWithLedger(ledgerRepo)
 
 	// Seed system accounts for all supported currencies.
 	for _, curr := range models.SupportedCurrencies {
@@ -22,7 +23,7 @@ func buildUseCase(complianceThreshold int64) (*payouts.UseCase, *fakes.AccountRe
 		accountRepo.SeedSystemAccount(models.AccountTypePayoutPending, curr)
 	}
 
-	uc := payouts.NewUseCase(payoutRepo, accountRepo, ledgerRepo, complianceThreshold)
+	uc := payouts.NewUseCase(payoutRepo, accountRepo, ledgerRepo, complianceThreshold, services.NewTransactionGuard(), fakes.NewAuditLogRepo())
 	return uc, accountRepo, ledgerRepo, payoutRepo
 }
 

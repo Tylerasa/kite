@@ -3,6 +3,7 @@ package conversions
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"time"
 
 	"github.com/google/uuid"
@@ -10,6 +11,7 @@ import (
 	"github.com/kite/internal/domain/models"
 	"github.com/kite/internal/domain/ports/in"
 	"github.com/kite/internal/domain/ports/out"
+	"github.com/kite/internal/domain/services"
 	"github.com/shopspring/decimal"
 )
 
@@ -17,11 +19,10 @@ const (
 	quoteTTL = 45 * time.Second
 )
 
-// fakeCheckAndWrite is an interface the fake LedgerRepo implements for atomic balance checks.
-// The real DB uses FOR UPDATE; the fake uses a mutex.
-type atomicLedger interface {
-	out.LedgerRepository
-	CheckAndWriteEntries(ctx context.Context, accountID uuid.UUID, requiredAmount int64, entries []*models.LedgerEntry) error
+// Config holds the runtime parameters for the conversions use case.
+type Config struct {
+	SpreadPct float64
+	CacheTTL  time.Duration
 }
 
 type UseCase struct {
@@ -31,6 +32,7 @@ type UseCase struct {
 	ledger      out.LedgerRepository
 	fxProvider  out.FXRateProvider
 	fxCache     out.FXRateCacheRepository
+	audit       out.AuditLogRepository
 	spreadPct   decimal.Decimal
 	cacheTTL    time.Duration
 }
@@ -42,8 +44,8 @@ func NewUseCase(
 	ledger out.LedgerRepository,
 	fxProvider out.FXRateProvider,
 	fxCache out.FXRateCacheRepository,
-	spreadPct float64,
-	cacheTTL time.Duration,
+	audit out.AuditLogRepository,
+	cfg Config,
 ) *UseCase {
 	return &UseCase{
 		quotes:      quotes,
@@ -52,12 +54,33 @@ func NewUseCase(
 		ledger:      ledger,
 		fxProvider:  fxProvider,
 		fxCache:     fxCache,
-		spreadPct:   decimal.NewFromFloat(spreadPct),
-		cacheTTL:    cacheTTL,
+		audit:       audit,
+		spreadPct:   decimal.NewFromFloat(cfg.SpreadPct),
+		cacheTTL:    cfg.CacheTTL,
 	}
 }
 
-func (uc *UseCase) CreateQuote(ctx context.Context, cmd in.QuoteCommand) (*in.QuoteResult, error) {
+func (uc *UseCase) CreateQuote(ctx context.Context, cmd in.QuoteCommand) (result *in.QuoteResult, err error) {
+	logID := uuid.New()
+	auditNow := time.Now().UTC()
+	_ = uc.audit.Create(ctx, &models.AuditLog{
+		ID: logID, UserID: cmd.UserID, Operation: "conversion_quote",
+		Status: "pending", RequestID: services.RequestIDFromCtx(ctx),
+		CreatedAt: auditNow, UpdatedAt: auditNow,
+	})
+	defer func() {
+		status, errCode := "success", (*string)(nil)
+		if err != nil {
+			status = "failure"
+			if de, ok := err.(*exceptions.DomainError); ok {
+				errCode = &de.Code
+			}
+		}
+		if auditErr := uc.audit.Update(ctx, logID, status, errCode); auditErr != nil {
+			slog.Error("audit update failed", "op", "conversion_quote", "error", auditErr)
+		}
+	}()
+
 	if !cmd.FromCurrency.Valid() || !cmd.ToCurrency.Valid() {
 		return nil, exceptions.ErrInvalidCurrency
 	}
@@ -120,8 +143,29 @@ func (uc *UseCase) CreateQuote(ctx context.Context, cmd in.QuoteCommand) (*in.Qu
 	return &in.QuoteResult{Quote: quote}, nil
 }
 
-func (uc *UseCase) ExecuteConversion(ctx context.Context, cmd in.ExecuteCommand) (*in.ConversionResult, error) {
-	quote, err := uc.quotes.GetByID(ctx, cmd.QuoteID)
+func (uc *UseCase) ExecuteConversion(ctx context.Context, cmd in.ExecuteCommand) (result *in.ConversionResult, err error) {
+	logID := uuid.New()
+	auditNow := time.Now().UTC()
+	_ = uc.audit.Create(ctx, &models.AuditLog{
+		ID: logID, UserID: cmd.UserID, Operation: "conversion_execute",
+		Status: "pending", RequestID: services.RequestIDFromCtx(ctx),
+		CreatedAt: auditNow, UpdatedAt: auditNow,
+	})
+	defer func() {
+		status, errCode := "success", (*string)(nil)
+		if err != nil {
+			status = "failure"
+			if de, ok := err.(*exceptions.DomainError); ok {
+				errCode = &de.Code
+			}
+		}
+		if auditErr := uc.audit.Update(ctx, logID, status, errCode); auditErr != nil {
+			slog.Error("audit update failed", "op", "conversion_execute", "error", auditErr)
+		}
+	}()
+
+	var quote *models.FXQuote
+	quote, err = uc.quotes.GetByID(ctx, cmd.QuoteID)
 	if err != nil {
 		return nil, err
 	}
@@ -142,7 +186,8 @@ func (uc *UseCase) ExecuteConversion(ctx context.Context, cmd in.ExecuteCommand)
 	}
 
 	// Atomically mark the quote as executed (prevents double-execute).
-	marked, err := uc.quotes.MarkExecuted(ctx, cmd.QuoteID)
+	var marked bool
+	marked, err = uc.quotes.MarkExecuted(ctx, cmd.QuoteID)
 	if err != nil {
 		return nil, fmt.Errorf("mark quote executed: %w", err)
 	}
@@ -199,23 +244,7 @@ func (uc *UseCase) ExecuteConversion(ctx context.Context, cmd in.ExecuteCommand)
 		CreatedAt:   now,
 	}
 
-	// Use atomic check-and-write if the ledger supports it (fake + real DB).
-	if al, ok := uc.ledger.(atomicLedger); ok {
-		if err := al.CheckAndWriteEntries(ctx, userFrom.ID, quote.AmountIn, nil); err != nil {
-			return nil, err
-		}
-	} else {
-		// Real DB path: balance is checked inside the transaction with FOR UPDATE.
-		balance, err := uc.ledger.GetBalanceForAccount(ctx, userFrom.ID)
-		if err != nil {
-			return nil, fmt.Errorf("check balance: %w", err)
-		}
-		if balance < quote.AmountIn {
-			return nil, exceptions.ErrInsufficientFunds
-		}
-	}
-
-	// Create the conversion record.
+	// Create the conversion record first so we have its ID for the ledger reference.
 	conversion := &models.Conversion{
 		ID:           uuid.New(),
 		UserID:       cmd.UserID,
@@ -231,12 +260,12 @@ func (uc *UseCase) ExecuteConversion(ctx context.Context, cmd in.ExecuteCommand)
 	}
 	ledgerTx.ReferenceID = conversion.ID
 
-	if err := uc.ledger.CreateTransaction(ctx, ledgerTx); err != nil {
-		return nil, fmt.Errorf("create ledger tx: %w", err)
+	// Atomically: lock the source account, verify balance, write ledger tx + entries.
+	// Uses SELECT FOR UPDATE in the real DB and a mutex in tests — no overdraft possible.
+	if err := uc.ledger.CheckAndWrite(ctx, userFrom.ID, quote.AmountIn, ledgerTx, entries); err != nil {
+		return nil, err
 	}
-	if err := uc.ledger.CreateEntries(ctx, entries); err != nil {
-		return nil, fmt.Errorf("write ledger entries: %w", err)
-	}
+
 	if err := uc.conversions.Create(ctx, conversion); err != nil {
 		return nil, fmt.Errorf("save conversion: %w", err)
 	}

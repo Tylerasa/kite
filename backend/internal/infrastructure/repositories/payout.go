@@ -19,8 +19,14 @@ func NewPayoutRepo(db *pgxpool.Pool) *PayoutRepo {
 	return &PayoutRepo{db: db}
 }
 
-func (r *PayoutRepo) Create(ctx context.Context, p *models.Payout) error {
-	_, err := r.db.Exec(ctx,
+func (r *PayoutRepo) CreateWithHold(ctx context.Context, p *models.Payout, ledgerTx *models.LedgerTransaction, entries []*models.LedgerEntry) error {
+	tx, err := r.db.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(ctx) //nolint:errcheck
+
+	_, err = tx.Exec(ctx,
 		`INSERT INTO payouts
 		 (id, user_id, source_currency, amount, status,
 		  recipient_account_number, recipient_bank_code, recipient_account_name,
@@ -30,7 +36,37 @@ func (r *PayoutRepo) Create(ctx context.Context, p *models.Payout) error {
 		p.RecipientAccountNumber, p.RecipientBankCode, p.RecipientAccountName,
 		p.ComplianceFlagged, p.CreatedAt, p.UpdatedAt,
 	)
-	return err
+	if err != nil {
+		return err
+	}
+
+	_, err = tx.Exec(ctx,
+		`INSERT INTO ledger_transactions (id, type, reference_id, created_at) VALUES ($1, $2, $3, $4)`,
+		ledgerTx.ID, string(ledgerTx.Type), ledgerTx.ReferenceID, ledgerTx.CreatedAt,
+	)
+	if err != nil {
+		return err
+	}
+
+	batch := &pgxBatch{}
+	for _, e := range entries {
+		batch.Queue(
+			`INSERT INTO ledger_entries (id, transaction_id, account_id, amount, direction, currency, created_at)
+			 VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+			e.ID, e.TransactionID, e.AccountID, e.Amount,
+			string(e.Direction), string(e.Currency), e.CreatedAt,
+		)
+	}
+	br := tx.SendBatch(ctx, batch.Batch())
+	for range entries {
+		if _, err := br.Exec(); err != nil {
+			br.Close()
+			return err
+		}
+	}
+	br.Close()
+
+	return tx.Commit(ctx)
 }
 
 func (r *PayoutRepo) GetByID(ctx context.Context, id uuid.UUID) (*models.Payout, error) {
@@ -61,7 +97,7 @@ func (r *PayoutRepo) ClaimPending(ctx context.Context) (*models.Payout, error) {
 	)
 	p, err := scanPayout(row)
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
+		if errors.Is(err, pgx.ErrNoRows) || errors.Is(err, exceptions.ErrPayoutNotFound) {
 			return nil, nil
 		}
 		return nil, err
