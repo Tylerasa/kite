@@ -196,7 +196,7 @@ export default function TransactionDetail() {
                       />
                     )}
 
-                    {!payoutInProgress && !payoutFailed && !payoutUnderReview && (
+                    {!payoutInProgress && !payoutFailed && !payoutUnderReview && payoutDetail.data && (
                       <>
                         {creditEntry ? (
                           <TimelineItem complete time={transferTime} text={`${compactAmount(creditEntry)} was sent to the recipient's bank account.`} />
